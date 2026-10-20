@@ -55,7 +55,16 @@ jest.mock('@/pages/modeling/detail', () => {
 jest.mock('@/pages/modeling/components/ModelLineagePanel', () => () => null);
 jest.mock('@/pages/modeling/components/ModelVersionPanel', () => () => null);
 jest.mock('@/pages/data-lifecycle/components/ModelLifecycleTab', () => () => null);
-jest.mock('@/pages/modeling/mapping', () => () => null);
+jest.mock('@/pages/modeling/mapping', () => {
+  const ReactLib = require('react');
+  return { __esModule: true, default: ({ onEditorStateChange }: {
+    onEditorStateChange?: (state: { dirty: boolean; saving: boolean; loading: boolean }) => void;
+  }) => {
+    const [value, setValue] = ReactLib.useState('server');
+    ReactLib.useEffect(() => { onEditorStateChange?.({ dirty: value !== 'server', saving: false, loading: false }); }, [value, onEditorStateChange]);
+    return <input aria-label="映射草稿" value={value} onChange={event => setValue(event.target.value)} />;
+  } };
+});
 jest.mock('@/services/modeling/api', () => ({
   getModelingModel: (...args: unknown[]) => mockGetModel(...args),
 }));
@@ -109,7 +118,7 @@ it('keeps every dirty structure draft edit when source return is cancelled, and 
   await act(async () => { await pendingConfirm?.onOk?.(jest.fn()); });
   expect(mockPush).toHaveBeenCalledTimes(1);
   const returned = mockPush.mock.calls[0][0] as string;
-  expect(returned.startsWith('/data-source?')).toBe(true);
+  expect(returned.startsWith('/data-source/explore?')).toBe(true);
   expect(new URLSearchParams(returned.split('?')[1]).get('table')).toBe('trade_order');
 });
 
@@ -184,3 +193,23 @@ it.each([['基本信息', 'overview'], ['版本管理', 'version']])(
     expect(query.get('table')).toBe('trade_order');
   },
 );
+
+it('guards a DWD mapping draft when leaving the mapping tab', async () => {
+  mockSearch = '?tab=mapping';
+  mockGetModel.mockResolvedValue({ ...model, layerCode: 'DWD' });
+  jest.spyOn(Modal, 'confirm').mockImplementation(options => {
+    pendingConfirm = options;
+    return { destroy: jest.fn(), update: jest.fn() };
+  });
+  render(<UnifiedModelView />);
+  await screen.findByLabelText('DWD 建模导航');
+  expect(screen.queryByLabelText('当前模型设计边界')).not.toBeInTheDocument();
+  fireEvent.change(await screen.findByLabelText('映射草稿'), { target: { value: 'unsaved-source-expression' } });
+  fireEvent.click(screen.getByText('版本管理'));
+  expect(pendingConfirm?.title).toBe('来源映射还有未保存的修改');
+  expect(mockReplace).not.toHaveBeenCalled();
+  await act(async () => { pendingConfirm?.onCancel?.(); });
+  expect(screen.getByLabelText('映射草稿')).toHaveValue('unsaved-source-expression');
+  await act(async () => { await pendingConfirm?.onOk?.(jest.fn()); });
+  expect(new URLSearchParams(mockReplace.mock.calls[0][0].search).get('tab')).toBe('version');
+});

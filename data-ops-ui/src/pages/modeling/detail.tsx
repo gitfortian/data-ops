@@ -11,6 +11,7 @@ import {
   Button,
   Card,
   Checkbox,
+  Dropdown,
   Input,
   InputNumber,
   Modal,
@@ -64,6 +65,8 @@ import {
   validateModelingStructure,
 } from '@/services/modeling/api';
 import ModelPublishSummary from './components/ModelPublishSummary';
+import DwdPublicationReview from './components/DwdPublicationReview';
+import './dwdWorkspace.less';
 import { previewModelingImportColumns } from '@/services/modeling/import';
 import type { ModelingImportColumnView, ModelingModelRecord, ModelingStructureRecord, ModelingTypeOption, ModelingValidationIssue } from '@/services/modeling/types';
 import type { ModelPublicationReadiness } from '@/services/modeling/api';
@@ -128,7 +131,9 @@ export interface ModelStructureEditorStatus {
 /** 模型详情：表结构在线编辑器（表基础信息 + 字段 + 主键/索引/分区/表属性全量保存）。 */
 const ModelingModelDetail: React.FC<{
   onEditorStateChange?: (status: ModelStructureEditorStatus) => void;
-}> = ({ onEditorStateChange }) => {
+  onNavigateTab?: (tab: string) => void;
+  layerCode?: string;
+}> = ({ onEditorStateChange, onNavigateTab, layerCode }) => {
 const draftSeq = useRef(0);
 const nextDraftKey = () => {
   draftSeq.current += 1;
@@ -168,6 +173,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
   const [structure, setStructure] = useState<ModelingStructureRecord>();
   const [modelInfo, setModelInfo] = useState<ModelingModelRecord | null>(null);
   const isOdsModel = modelInfo?.layerCode?.toUpperCase() === 'ODS';
+  const isDwdModel = (modelInfo?.layerCode || layerCode)?.toUpperCase() === 'DWD';
   const showStandardControls = modelInfo?.id != null && String(modelInfo.id) === modelId
     && Boolean(modelInfo.layerCode) && !isOdsModel;
   const [foundationOpen, setFoundationOpen] = useState(true);
@@ -175,6 +181,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
     setFoundationOpen(!['DWS', 'ADS'].includes((modelInfo?.layerCode || '').toUpperCase()));
   }, [modelInfo?.layerCode]);
   const [loading, setLoading] = useState(false);
+  const [structureProblem, setStructureProblem] = useState<string>();
   const [saving, setSaving] = useState(false);
   // The unified view's source-return action must not bypass the draft owner.
   // Report the actual local reducer dirty bit, not a second inferred draft.
@@ -364,6 +371,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
     if (!modelId) return;
     const isCurrent = beginStructureLoad();
     setLoading(true);
+    setStructureProblem(undefined);
     try {
       // 并行加载模型信息和结构信息
       const [modelData, data] = await Promise.all([
@@ -579,6 +587,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
       }
     } catch (error) {
       if (!isCurrent()) return;
+      setStructureProblem(error instanceof Error ? error.message : '表结构加载失败');
       message.error(error instanceof Error ? error.message : '表结构加载失败');
     } finally {
       if (isCurrent()) setLoading(false);
@@ -2345,12 +2354,13 @@ const emptyColumnDraft = (): ColumnDraft => ({
   const approvalPending = publishApproval?.status === 'PENDING';
 
   return (
-    <div className={'modeling-studio-editor' + (isOdsModel ? ' modeling-studio-editor-ods' : '')}>
+    <div className={'modeling-studio-editor' + (isOdsModel ? ' modeling-studio-editor-ods' : '')
+      + (isDwdModel ? ' modeling-studio-editor-dwd' : '')}>
       {showStandardControls && coverageFeedback && coverageFeedback.projectId === currentProject?.id
         && coverageFeedback.baseline.modelId === Number(modelId) && (
         <Alert showIcon className="mb-4" type="info"
           message="已从治理报告定位到当前物理字段"
-          description={dirty
+          description={isDwdModel ? (dirty ? '请先保存修改，再重新核对标准。' : '修改已保存，可重新核对标准。') : dirty
             ? '当前结构有未保存更改；旧治理报告不能代表新字段。请先保存或放弃更改，再重新核验。'
             : '可重新读取已保存的字段与当前标准，检查治理证据是否变化。历史报告和发布资格不会自动修改。'}
           action={<Button disabled={dirty || loading || saving || !canAll(['modeling:read'])}
@@ -2358,11 +2368,11 @@ const emptyColumnDraft = (): ColumnDraft => ({
       )}
       <div className="modeling-studio-editor-head">
         <div>
-          {!isOdsModel ? <span className="modeling-studio-overline">当前模型 / {modelInfo?.layerCode || '物理模型'}</span> : null}
-          <h2>{isOdsModel ? '表结构' : '设计编辑与版本发布'}</h2>
-          {!isOdsModel ? <p>保存结构草稿后，再检查映射、标准与发布条件；正式运行和写入不在此执行。</p> : null}
+          {!isOdsModel && !isDwdModel ? <span className="modeling-studio-overline">当前模型 / {modelInfo?.layerCode || '物理模型'}</span> : null}
+          <h2>{isOdsModel || isDwdModel ? '表结构' : '设计编辑与版本发布'}</h2>
+          {!isOdsModel && !isDwdModel ? <p>保存结构草稿后，再检查映射、标准与发布条件；正式运行和写入不在此执行。</p> : null}
           {!isOdsModel || modelInfo?.latestVersionNo || dirty || publishApproval ? <Space wrap size={6} className="!mt-2">
-            {!isOdsModel && modelInfo?.status ? <Tag color={modelInfo.status === 'PUBLISHED' ? 'success' : 'default'}>
+            {!isOdsModel && !isDwdModel && modelInfo?.status ? <Tag color={modelInfo.status === 'PUBLISHED' ? 'success' : 'default'}>
               {modelInfo.status === 'PUBLISHED' ? '已发布' : modelInfo.status === 'DRAFT' ? '草稿' : modelInfo.status}
             </Tag> : null}
             {modelInfo?.latestVersionNo ? <Tag>最新版本 V{modelInfo.latestVersionNo}</Tag> : null}
@@ -2377,6 +2387,29 @@ const emptyColumnDraft = (): ColumnDraft => ({
         </div>
         <div className="modeling-studio-editor-actions" role="toolbar" aria-label="表结构操作">
           <div className="modeling-studio-editor-tools">
+            {isDwdModel ? <>
+              <YakButton disabled={!modelId || dirty || loading || saving || !canAll(['modeling:read'])}
+                title={dirty ? '请先保存结构修改' : undefined}
+                onClick={() => setStandardCoverageOpen(true)}>检查标准</YakButton>
+              {Number(modelInfo?.latestVersionNo) > 0 ? <>
+                <YakButton disabled={dirty || loading || saving || !canAll(['modeling:read'])}
+                  onClick={() => setDwdHistoryOpen(true)}>映射历史</YakButton>
+                <YakButton disabled={dirty || loading || saving || !canAll(['modeling:read'])}
+                  onClick={() => setDataDevHandoffOpen(true)}>开发交接</YakButton>
+              </> : null}
+              <Dropdown trigger={['click']} menu={{ items: [
+                { key: 'ddl', label: '查看建表脚本', disabled: dirty || loading || saving,
+                  onClick: () => void handleGenerateDdl() },
+                { key: 'metric', label: '设计指标', disabled: dirty || loading || saving || !structure || !canAll(['metric:create', 'modeling:read']),
+                  onClick: () => history.push('/metric/manage?sourceModelId=' + encodeURIComponent(String(modelId))) },
+                ...(returnAssetId && Number.isSafeInteger(returnAssetId) && returnAssetId > 0 ? [
+                  { key: 'asset', label: '返回资产详情', disabled: dirty || loading || saving,
+                    onClick: () => history.push('/data-asset/detail/' + returnAssetId) },
+                ] : []),
+              ] }}><Button>更多操作</Button></Dropdown>
+              {publishFlowEnabled ? <YakButton disabled={loading || !structure || approvalPending}
+                onClick={() => void handlePublish()} loading={publishing}>直接发布</YakButton> : null}
+            </> : <>
             {modelInfo?.layerCode?.toUpperCase() === 'ODS' && modelInfo.sourceDatasourceId
               && modelInfo.sourceDatabase && modelInfo.sourceTable ? (
               <YakButton onClick={() => {
@@ -2417,6 +2450,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
               onClick={() => history.push('/metric/manage?sourceModelId=' + encodeURIComponent(String(modelId)))}>
               继续设计指标
             </YakButton> : null}
+            </>}
           </div>
           <div className="modeling-studio-editor-main-actions">
             {publishFlowEnabled ? <YakButton
@@ -2438,11 +2472,13 @@ const emptyColumnDraft = (): ColumnDraft => ({
 
       {loading && !structure ? null : !structure ? (
         <Card bordered={false}>
-          <YakEmpty compact title="模型不存在或已被删除" />
+          {isDwdModel && structureProblem ? <Alert showIcon type="error" message="表结构加载失败" description={structureProblem}
+            action={<Button onClick={() => void loadStructure()}>重新加载</Button>} />
+            : <YakEmpty compact title="模型不存在或已被删除" />}
         </Card>
       ) : (
         <div className="space-y-4">
-          {!isOdsModel ? <div className="modeling-studio-layer-intro">
+          {!isOdsModel && !isDwdModel ? <div className="modeling-studio-layer-intro">
             <strong>{modelInfo?.layerCode || '物理'} · 当前模型设计任务</strong>
             <p>{({
               ODS: '来源核验 → ODS 物理结构 → 保存并返回来源；资产治理独立进行。',
@@ -2453,7 +2489,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
             } as Record<string, string>)[(modelInfo?.layerCode || '').toUpperCase()] ||
               '先核对业务定义和目标，再编辑物理字段、映射与版本。'}</p>
           </div> : null}
-          {!isOdsModel ? <div className="modeling-studio-specialized">
+          {!isOdsModel && !isDwdModel ? <div className="modeling-studio-specialized">
           {modelInfo?.layerCode === 'DWS' && modelId ? (
             <DwsGrainDesignPanel
               key={`${currentProject?.id ?? 'none'}:${modelId}`}
@@ -2487,13 +2523,13 @@ const emptyColumnDraft = (): ColumnDraft => ({
 
           </div> : null}
           <section className="modeling-studio-foundation" aria-label="物理表结构设计">
-            {!isOdsModel ? <button type="button" className="modeling-studio-foundation-head !w-full !text-left"
+            {!isOdsModel && !isDwdModel ? <button type="button" className="modeling-studio-foundation-head !w-full !text-left"
               aria-expanded={foundationOpen} onClick={() => setFoundationOpen(value => !value)}>
               <span><strong>物理表结构与技术属性</strong>
                 <small className="!ml-3 !text-[#728199]">字段、主键、分区、索引和表属性均保留原有服务端保存能力</small></span>
               <strong>{foundationOpen ? '收起' : '展开编辑'}</strong>
             </button> : null}
-            {isOdsModel || foundationOpen ? <div className="space-y-4">
+            {isOdsModel || isDwdModel || foundationOpen ? <div className="space-y-4">
           <Card
             bordered={false}
             title="表基础信息"
@@ -2563,7 +2599,9 @@ const emptyColumnDraft = (): ColumnDraft => ({
             bordered={false}
             title="字段列表"
             extra={
-              showStandardControls ? (
+              isDwdModel ? <Typography.Text type="secondary" className="text-[12px]">
+                {rows.length} 个字段 · 已关联标准字段 {rows.filter(row => row.stdFieldId != null).length} 个
+              </Typography.Text> : showStandardControls ? (
                 (() => {
                   const ungovernedCount = rows.filter((r) => !r.stdTypeId).length;
                   return ungovernedCount > 0 ? (
@@ -2599,7 +2637,32 @@ const emptyColumnDraft = (): ColumnDraft => ({
               <div className="mb-3 text-[12px] text-[#b54708]">来源字段暂不可读取，无法比较差异</div>
             ) : null}
             {/* C3(2026-09-17):批量添加/批量删除/刷新工具栏 */}
-            {rows.length ? (
+            {isDwdModel && rows.length ? <div className="dwd-field-toolbar">
+              <Space wrap>
+                <Button size="small" onClick={() => { markDirty(); setRows(previous => [...previous, emptyColumnDraft()]); }}>添加字段</Button>
+                <Dropdown trigger={['click']} menu={{ items: [
+                  { key: 'source', label: '从源表导入', onClick: () => void openImportModal() },
+                  { key: 'model', label: '从已有模型导入', onClick: () => void handleOpenImportFromModel() },
+                  { key: 'process', label: '从业务过程导入', onClick: () => void handleOpenImportFromProcess() },
+                  ...(importConfig ? [{ key: 'reimport', label: '重新导入来源字段', disabled: reimportLoading,
+                    onClick: () => void handleReimport() }] : []),
+                ] }}><Button size="small">导入字段</Button></Dropdown>
+                <Button size="small" onClick={() => setBulkAddOpen(true)}>批量添加</Button>
+                <Dropdown trigger={['click']} menu={{ items: [
+                  { key: 'discover', label: '匹配标准字段', disabled: discoverLoading, onClick: () => void handleStandardDiscover() },
+                  { key: 'assistant', label: 'AI 标准辅助',
+                    disabled: !selectedRowKeys.length || selectedRowKeys.length > 5
+                      || !canAll(['agent:chat:run', 'agent:session:read', 'modeling:update', 'semantic:read']),
+                    onClick: () => setBatchAssistantOpen(true) },
+                ] }}><Button size="small">标准工具</Button></Dropdown>
+                {selectedRowKeys.length ? <Button size="small" danger onClick={handleBatchDelete}>删除所选（{selectedRowKeys.length}）</Button> : null}
+              </Space>
+              <Button size="small" loading={loading} onClick={() => {
+                if (!dirty) { void loadStructure(); return; }
+                Modal.confirm({ title: '重新加载表结构？', content: '重新加载会放弃未保存的字段修改。',
+                  okText: '放弃修改并刷新', cancelText: '继续编辑', onOk: () => void loadStructure() });
+              }}>刷新</Button>
+            </div> : rows.length ? (
               <div className="mb-2 flex items-center justify-between gap-2">
                 <Space size={8}>
                   <Button size="small" onClick={() => setBulkAddOpen(true)}>
@@ -2775,7 +2838,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
                 </Space>
               </YakEmpty>
             )}
-            <Space className="mt-3">
+            <Space className="mt-3" style={isDwdModel && rows.length ? { display: 'none' } : undefined}>
               <Button
                 type="dashed"
                 onClick={() => {
@@ -2790,6 +2853,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
 
           {/* C3(2026-09-17):批量添加 N 行 */}
           <Modal
+            className={isDwdModel ? 'dwd-modeling-modal' : undefined}
             open={bulkAddOpen}
             title="批量添加字段"
             okText="添加"
@@ -2810,6 +2874,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
 
           {/* 导入字段弹窗 */}
           <Modal
+            className={isDwdModel ? 'dwd-modeling-modal' : undefined}
             open={importModalOpen}
             title="从源表导入字段"
             okText="导入"
@@ -2864,6 +2929,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
 
           {/* 从已有模型导入字段弹窗 */}
           <Modal
+            className={isDwdModel ? 'dwd-modeling-modal' : undefined}
             open={importFromModelOpen}
             title="从已有模型导入字段"
             okText="导入"
@@ -2898,6 +2964,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
 
           {/* 从业务过程导入字段弹窗 */}
           <Modal
+            className={isDwdModel ? 'dwd-modeling-modal' : undefined}
             open={importFromProcessOpen}
             title="从业务过程导入字段"
             okText="导入"
@@ -3249,6 +3316,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
       {showStandardControls && modelId && standardCoverageOpen && (
         <PhysicalStandardCoveragePanel
           modelId={Number(modelId)} open={standardCoverageOpen}
+          layerCode={modelInfo?.layerCode}
           onClose={() => setStandardCoverageOpen(false)}
           baseline={coverageFeedback?.projectId === currentProject?.id
             && coverageFeedback?.baseline.modelId === Number(modelId)
@@ -3261,6 +3329,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
       )}
 
       <Modal
+        className={isDwdModel ? 'dwd-modeling-modal' : undefined}
         open={publishPreview !== null}
         width={680}
         centered
@@ -3296,7 +3365,13 @@ const emptyColumnDraft = (): ColumnDraft => ({
           before={publishPreview.before} after={publishPreview.after}
           publishedVersionNo={publishPreview.publishedVersionNo}
           layerCode={modelInfo?.layerCode} approval={publishPreview.action === 'APPROVAL'} /> : null}
-        {['DWD', 'DIM', 'DWS', 'ADS'].includes(modelInfo?.layerCode?.toUpperCase() || '') ? (
+        {isDwdModel ? <DwdPublicationReview readiness={publishPreview?.readiness ?? null}
+          onOpenStandards={() => { setPublishPreview(null); setStandardCoverageOpen(true); }}
+          onOpenLogical={() => {
+            setPublishPreview(null);
+            if (onNavigateTab) onNavigateTab('logical');
+            else history.push(`/modeling/models/${modelId}?tab=logical`);
+          }} /> : ['DIM', 'DWS', 'ADS'].includes(modelInfo?.layerCode?.toUpperCase() || '') ? (
           <div className="mb-3 space-y-2" aria-label="发布前全列标准证据">
             <Alert
               type={publishPreview?.readiness?.standardsVerdict === 'VALID' ? 'warning' : 'error'}
@@ -3375,9 +3450,10 @@ const emptyColumnDraft = (): ColumnDraft => ({
         ) : null}
       </Modal>
       <Modal
+        className={isDwdModel ? 'dwd-modeling-modal' : undefined}
         open={ddlOpen}
         width={760}
-        title={`建库脚本（${ddlDialect}，仅生成不执行）`}
+        title={isDwdModel ? `建表脚本 · ${ddlDialect}` : `建库脚本（${ddlDialect}，仅生成不执行）`}
         footer={[
           <Button key="copy" onClick={() => void handleCopyDdl()}>
             复制脚本

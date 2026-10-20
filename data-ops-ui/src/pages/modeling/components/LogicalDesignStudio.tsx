@@ -1,17 +1,20 @@
-import { Alert, Descriptions, Input, Segmented, Space, Table, Tag, Typography, theme } from 'antd';
+import { Alert, Descriptions, Input, Segmented, Space, Table, Tag, theme } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ReactFlow, { Background, Controls, Handle, MarkerType, Position, useNodesState } from 'reactflow';
 import type { Edge, NodeProps, ReactFlowInstance } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { YakButton, YakEmpty } from '@/components/ui';
-import type { LogicalDraftDetail, LogicalId } from '@/services/modeling/logical';
+import type { LogicalDraftDetail } from '@/services/modeling/logical';
+import type { LogicalId } from '@/services/modeling/logicalIdentity';
 import { parseLogicalId } from '@/services/modeling/logicalIdentity';
 import type { SemanticFieldRecord } from '@/services/semantic/types';
 import { LOGICAL_CANVAS_LIMIT, LOGICAL_CARD_ATTRIBUTE_LIMIT, LOGICAL_CARDINALITY,
   logicalDesignReminders, logicalDesignView, logicalEntityLabel, logicalEntityPositions } from '../editor/logicalDesign';
 import type { LogicalObjectSelection } from '../editor/logicalDesign';
+import './LogicalDesignStudio.less';
 
 type EntityItem = LogicalDraftDetail['entities'][number];
+type OwnerId = LogicalDraftDetail['model']['id'];
 type EntityNodeData = {
   item: EntityItem;
   activeAttributeId?: LogicalId;
@@ -54,9 +57,9 @@ interface Props {
   standards: SemanticFieldRecord[];
   canEdit: boolean;
   busy: boolean;
-  onEditEntity: (id?: LogicalId) => void;
-  onEditAttribute: (entityId: LogicalId, id?: LogicalId) => void;
-  onEditRelation: (id?: LogicalId, sourceEntityId?: LogicalId) => void;
+  onEditEntity: (id?: OwnerId) => void;
+  onEditAttribute: (entityId: OwnerId, id?: OwnerId) => void;
+  onEditRelation: (id?: OwnerId, sourceEntityId?: OwnerId) => void;
 }
 
 /** Canvas and tables consume the same owner detail. Layout and selection stay in this session. */
@@ -64,7 +67,8 @@ export default function LogicalDesignStudio({ detail, standards, canEdit, busy, 
   const { token } = theme.useToken();
   const [mode, setMode] = useState<'canvas' | 'table'>('canvas');
   const [keyword, setKeyword] = useState('');
-  const [selection, setSelection] = useState<LogicalObjectSelection>();
+  const [selection, setSelection] = useState<LogicalObjectSelection | undefined>(() => detail.entities[0]
+    ? { kind: 'entity', id: detail.entities[0].entity.id } : undefined);
   const [focusId, setFocusId] = useState<LogicalId>();
   const [canvasSession, setCanvasSession] = useState(0);
   const [flow, setFlow] = useState<ReactFlowInstance>();
@@ -93,6 +97,13 @@ export default function LogicalDesignStudio({ detail, standards, canEdit, busy, 
   const canWrite = canEdit && !busy;
 
   useEffect(() => {
+    setSelection(detail.entities[0] ? { kind: 'entity', id: detail.entities[0].entity.id } : undefined);
+    setFocusId(undefined);
+    setKeyword('');
+    setNodes([]);
+  }, [detail.model.id]);
+
+  useEffect(() => {
     const positions = logicalEntityPositions(view.entities);
     setNodes(previous => view.entities.map(item => ({
       ...previous.find(node => node.id === String(item.entity.id)),
@@ -119,16 +130,19 @@ export default function LogicalDesignStudio({ detail, standards, canEdit, busy, 
   const restoreAll = () => { setFocusId(undefined); setCanvasSession(value => value + 1); };
   const arrange = () => {
     const positions = logicalEntityPositions(view.entities);
-    setNodes(previous => previous.map(node => ({ ...node, position: positions.get(parseLogicalId(node.id)!)! })));
+    setNodes(previous => previous.map(node => {
+      const entity = view.entities.find(item => String(item.entity.id) === node.id);
+      return entity ? { ...node, position: positions.get(entity.entity.id)! } : node;
+    }));
     setCanvasSession(value => value + 1);
   };
   const standardLabel = (id?: number) => {
-    if (id == null) return '尚未关联标准';
+    if (id == null) return '未关联';
     const field = standards.find(item => item.id === id);
-    return field ? `${field.name}（${field.code}）` : `已保存引用 #${id}，当前未解析名称`;
+    return field ? `${field.name}（${field.code}）` : `标准 #${id}（名称未读取）`;
   };
 
-  return <section aria-label="逻辑设计工作区" className="overflow-hidden rounded-xl border border-[#e4e9f0] bg-white">
+  return <section aria-label="逻辑设计工作区" className="logical-design-studio overflow-hidden rounded-xl border border-[#e4e9f0] bg-white">
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef1f5] px-4 py-3">
       <Space wrap><span className="text-[14px] font-semibold">实体与关系</span>
         <span className="text-[12px] text-[#667085]">{detail.entities.length} 个实体 · {detail.entities.reduce((sum, item) => sum + item.attributes.length, 0)} 个属性 · {detail.relations.length} 条关系</span>
@@ -136,13 +150,16 @@ export default function LogicalDesignStudio({ detail, standards, canEdit, busy, 
       <Space wrap>
         <Segmented aria-label="逻辑设计视图" value={mode} options={[{ value: 'canvas', label: '关系画布' }, { value: 'table', label: '表格设计' }]}
           onChange={value => setMode(value as 'canvas' | 'table')} />
-        <YakButton disabled={!canWrite} onClick={() => onEditEntity()}>添加实体</YakButton>
+        <YakButton type="primary" disabled={!canWrite} onClick={() => onEditEntity()}>添加实体</YakButton>
         <YakButton disabled={!canWrite || detail.entities.length < 2}
           onClick={() => onEditRelation(undefined, selectedEntity?.entity.id)}>定义关系</YakButton>
       </Space>
     </div>
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[#eef1f5] bg-[#f8fafc] px-4 py-2 text-[12px]">
-      <span className="text-[#667085]">设计提醒</span>
+    <details className="logical-design-check border-b border-[#eef1f5] bg-[#f8fafc] px-4 py-2 text-[12px]">
+      <summary className="cursor-pointer text-[#667085]">检查设计
+        <span className="ml-2 text-[#98a2b3]">{reminders.missingStandards.length + reminders.missingPrimary.length + reminders.pendingRelations.length} 项待补充</span>
+      </summary>
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
       <button type="button" disabled={!reminders.missingStandards.length} className="text-[#475467] disabled:text-[#98a2b3]"
         onClick={() => { const item = reminders.missingStandards[0]; selectEntity(item.entityId, item.attributeId); }}>
         待关联标准 {reminders.missingStandards.length}
@@ -151,13 +168,13 @@ export default function LogicalDesignStudio({ detail, standards, canEdit, busy, 
         onClick={() => selectEntity(reminders.missingPrimary[0].entity.id)}>待声明主标识 {reminders.missingPrimary.length}</button>
       <button type="button" disabled={!reminders.pendingRelations.length} className="text-[#475467] disabled:text-[#98a2b3]"
         onClick={() => setSelection({ kind: 'relation', id: reminders.pendingRelations[0].id })}>基数待确认 {reminders.pendingRelations.length}</button>
-      <span className="text-[11px] text-[#98a2b3]">提醒供人工核对，冻结仍按原有规则处理</span>
-    </div>
-    <div className="grid min-w-0 grid-cols-1 lg:grid-cols-[190px_minmax(0,1fr)] 2xl:grid-cols-[210px_minmax(0,1fr)_300px]">
-      <aside aria-label="逻辑对象导航" className="border-b border-[#eef1f5] p-3 lg:border-b-0 lg:border-r">
+      </div>
+    </details>
+    <div className="logical-design-layout min-w-0">
+      <aside aria-label="逻辑对象导航" className="logical-design-navigation border-[#eef1f5] p-3">
         <Input.Search placeholder="查找实体或属性" allowClear value={keyword} onChange={event => setKeyword(event.target.value)} />
-        <div className="mb-2 mt-3 text-[11px] text-[#98a2b3]">{search ? `匹配 ${matches.length} 个实体，画布范围不变` : '当前逻辑草稿的业务实体'}</div>
-        <div className="max-h-[500px] space-y-1 overflow-auto">
+        <div className="mb-2 mt-3 text-[11px] text-[#98a2b3]">{search ? `匹配 ${matches.length} 个实体` : '业务实体'}</div>
+        <div className="logical-design-object-list space-y-1 overflow-auto">
           {matches.map(item => <div key={item.entity.id}>
             <button type="button" aria-label={`选择实体 ${logicalEntityLabel(item.entity)}`}
               aria-pressed={selectedEntity?.entity.id === item.entity.id}
@@ -186,11 +203,13 @@ export default function LogicalDesignStudio({ detail, standards, canEdit, busy, 
           </Space>
         </div>
         {mode === 'canvas' ? <div className="h-[580px] bg-[#f8fafc]" aria-label="逻辑实体关系画布">
-          {overBudget ? <div className="p-6"><Alert type="info" showIcon message={`当前范围有 ${view.entities.length} 个实体，超过画布 ${LOGICAL_CANVAS_LIMIT} 个的显示预算`}
-            description="对象导航与表格保留全部实体；选择一个实体后聚焦直接关联，或使用表格设计。没有截断后隐藏的关系全图。" />
+          {overBudget ? <div className="p-6"><Alert type="info" showIcon message={`当前有 ${view.entities.length} 个实体，建议使用表格设计`}
+            description={`画布最多展示 ${LOGICAL_CANVAS_LIMIT} 个实体，可选择实体后聚焦关联。`} />
             <YakButton className="!mt-4" onClick={() => setMode('table')}>使用表格设计</YakButton></div>
             : !detail.entities.length ? <div className="p-8"><YakEmpty compact title="先定义一个业务实体"
-              description="围绕当前业务过程明确实体、属性与业务主标识，再人工定义关系。" /></div>
+              description="添加实体后，继续定义属性和实体关系。">
+              <YakButton type="primary" disabled={!canWrite} onClick={() => onEditEntity()}>创建第一个实体</YakButton>
+            </YakEmpty></div>
               : <ReactFlow key={`${canvasSession}:${view.entities.map(item => item.entity.id).join(',')}`}
                 nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange} onInit={setFlow}
                 onNodeClick={(_, node) => selectEntity(parseLogicalId(node.id)!)}
@@ -208,7 +227,10 @@ export default function LogicalDesignStudio({ detail, standards, canEdit, busy, 
                   <span className="block text-[#344054]">{logicalEntityLabel(item.entity)}</span><span className="text-[11px] text-[#98a2b3]">{item.entity.code}</span></button> },
                 { title: '属性', render: (_, item) => item.attributes.length },
                 { title: '业务主标识', render: (_, item) => item.attributes.filter(attribute => attribute.primaryFlag).map(attribute => attribute.name).join('、') || '待声明' },
-                { title: '操作', render: (_, item) => <YakButton size="small" onClick={() => selectEntity(item.entity.id)}>查看属性</YakButton> },
+                { title: '操作', render: (_, item) => <Space size={4} wrap>
+                  <YakButton size="small" onClick={() => selectEntity(item.entity.id)}>查看属性</YakButton>
+                  <YakButton size="small" disabled={!canWrite} onClick={() => onEditAttribute(item.entity.id)}>添加属性</YakButton>
+                </Space> },
               ]} />
           </div>
           <div><div className="mb-2 text-[13px] font-medium">实体关系</div>
@@ -220,25 +242,31 @@ export default function LogicalDesignStudio({ detail, standards, canEdit, busy, 
               ]} />
           </div>
         </div>}
-        <p className="m-0 border-t border-[#eef1f5] px-3 py-2 text-[11px] text-[#98a2b3]">拖动和排列只改变本次布局。连线表达实体与基数；字段对、JOIN 和加载逻辑需另行设计。</p>
       </div>
-      <aside aria-label="逻辑对象属性" className="min-w-0 border-t border-[#eef1f5] p-4 lg:col-span-2 2xl:col-span-1 2xl:border-l 2xl:border-t-0">
+      <aside aria-label="逻辑对象属性" className="logical-design-inspector min-w-0 border-[#eef1f5] p-4">
         {!canEdit && <Tag className="!mb-3">当前只读</Tag>}
         {selectedEntity ? <>
-          <div className="mb-1 text-[11px] text-[#98a2b3]">业务实体 · #{selectedEntity.entity.id}</div>
+          <div className="mb-1 text-[11px] text-[#98a2b3]" title={`实体 ID：${selectedEntity.entity.id}`}>业务实体</div>
           <div className="break-all text-[16px] font-semibold">{logicalEntityLabel(selectedEntity.entity)}</div>
           <div className="mb-3 mt-1 break-all text-[12px] text-[#98a2b3]">{selectedEntity.entity.code}</div>
-          <p className="text-[12px] text-[#667085]">{selectedEntity.entity.description || '尚无业务说明'}</p>
+          {selectedEntity.entity.description && <p className="text-[12px] text-[#667085]">{selectedEntity.entity.description}</p>}
           <Space wrap><YakButton size="small" disabled={!canWrite} onClick={() => onEditEntity(selectedEntity.entity.id)}>编辑实体</YakButton>
             <YakButton size="small" disabled={!canWrite} onClick={() => onEditAttribute(selectedEntity.entity.id)}>添加属性</YakButton></Space>
-          <div className="mb-2 mt-5 text-[13px] font-medium">完整属性 · {selectedEntity.attributes.length}</div>
+          <div className="mb-2 mt-5 text-[13px] font-medium">属性 · {selectedEntity.attributes.length}</div>
           <Table size="small" rowKey="id" dataSource={selectedEntity.attributes} pagination={{ pageSize: 8, showSizeChanger: false }}
+            rowClassName={attribute => selectedAttribute?.id === attribute.id ? 'logical-design-active-attribute' : ''}
+            locale={{ emptyText: <YakEmpty compact title="还没有属性">
+              <YakButton disabled={!canWrite} onClick={() => onEditAttribute(selectedEntity.entity.id)}>添加第一个属性</YakButton>
+            </YakEmpty> }}
             columns={[{ title: '属性', render: (_, attribute) => <button type="button" className="text-left"
               aria-label={`查看属性 ${selectedEntity.entity.code}.${attribute.code}`}
               onClick={() => selectEntity(selectedEntity.entity.id, attribute.id)}>
               <span className="block text-[12px]">{attribute.primaryFlag ? '◇ ' : ''}{attribute.name}</span>
               <span className="break-all text-[10px] text-[#98a2b3]">{attribute.code}</span></button> },
-            { title: '类型', dataIndex: 'logicalType', render: value => <span className="text-[11px]">{value || '待补'}</span> }]} />
+            { title: '类型', dataIndex: 'logicalType', render: value => <span className="text-[11px]">{value || '待补'}</span> },
+            { title: '', width: 44, render: (_, attribute) => <YakButton type="link" size="small"
+              aria-label={`编辑属性 ${selectedEntity.entity.code}.${attribute.code}`} disabled={!canWrite}
+              onClick={() => onEditAttribute(selectedEntity.entity.id, attribute.id)}>编辑</YakButton> }]} />
           {selectedAttribute && <section aria-label="当前逻辑属性" className="mt-4 rounded-lg border border-[#e4e9f0] bg-[#f8fafc] p-3">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><span className="text-[13px] font-semibold">{selectedAttribute.name}</span>
               <YakButton size="small" disabled={!canWrite} onClick={() => onEditAttribute(selectedEntity.entity.id, selectedAttribute.id)}>编辑属性</YakButton></div>
@@ -252,10 +280,10 @@ export default function LogicalDesignStudio({ detail, standards, canEdit, busy, 
             ]} />
           </section>}
         </> : selectedRelation ? <>
-          <div className="mb-2 text-[11px] text-[#98a2b3]">实体关系 · #{selectedRelation.id}</div>
+          <div className="mb-2 text-[11px] text-[#98a2b3]" title={`关系 ID：${selectedRelation.id}`}>实体关系</div>
           <div className="break-all text-[14px] font-medium">{nameOf(selectedRelation.sourceEntityId)} → {nameOf(selectedRelation.targetEntityId)}</div>
-          <Tag className="!my-3" color={selectedRelation.cardinality === 'UNKNOWN' ? 'warning' : 'default'}>{LOGICAL_CARDINALITY[selectedRelation.cardinality]}</Tag>
-          <p className="text-[12px] text-[#667085]">{selectedRelation.description || '尚无关系业务说明'}</p>
+          <Tag className="!my-3">{LOGICAL_CARDINALITY[selectedRelation.cardinality]}</Tag>
+          {selectedRelation.description && <p className="text-[12px] text-[#667085]">{selectedRelation.description}</p>}
           <YakButton size="small" disabled={!canWrite} onClick={() => onEditRelation(selectedRelation.id)}>编辑关系</YakButton>
           <div className="mt-5 space-y-2">
             {[['来源', selectedRelation.sourceEntityId], ['目标', selectedRelation.targetEntityId]].map(([label, id]) => <div key={label}>
@@ -263,11 +291,10 @@ export default function LogicalDesignStudio({ detail, standards, canEdit, busy, 
                 onClick={() => selectEntity(parseLogicalId(id)!)}>查看{label}实体</YakButton>
             </div>)}
           </div>
-          <Typography.Paragraph type="secondary" className="!mt-4 !text-[12px]">基数按来源 → 目标解读。关系不证明外键约束或加工 JOIN 已实现。</Typography.Paragraph>
         </> : <div className="py-10"><YakEmpty compact title="选择一个设计对象" description="点击实体、属性或关系，查看当前定义并继续编辑。" /></div>}
-        <p className="mb-0 mt-4 border-t border-[#eef1f5] pt-3 text-[11px] text-[#98a2b3]">此处展示当前草稿；标准有效性与历史差异在冻结版本的语义审阅中核验。</p>
       </aside>
     </div>
-    {!!view.unresolved.length && <Alert type="warning" showIcon message={`${view.unresolved.length} 条关系的端点在当前草稿中未解析，画布未绘制这些连线，请在表格中核对。`} />}
+    {!!view.unresolved.length && <Alert type="warning" showIcon message={`${view.unresolved.length} 条关系缺少有效实体，需核对关联对象`}
+      action={<YakButton size="small" onClick={() => setMode('table')}>查看关系</YakButton>} />}
   </section>;
 }

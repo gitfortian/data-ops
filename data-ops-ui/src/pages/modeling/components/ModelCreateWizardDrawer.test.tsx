@@ -28,12 +28,27 @@ const setup = (extra: Partial<ComponentProps<typeof ModelCreateWizardDrawer>> = 
 
 it('restores verified nested business process and its parent root domain on a scoped new-model route', async () => {
   const { submit } = setup();
-  expect(await screen.findByText('当前业务过程：下单')).toBeInTheDocument();
-  expect(screen.getByText(/业务粒度：每笔订单/)).toBeInTheDocument();
+  expect(await screen.findByText('下单 · 每笔订单')).toBeInTheDocument();
+  expect(screen.getByLabelText('业务过程')).toBeDisabled();
   expect(screen.getByText('业务域')).toBeInTheDocument();
   expect(screen.getByText('创建物理模型草稿')).toBeInTheDocument();
   fireEvent.click(screen.getByText('创建物理草稿'));
   await waitFor(() => expect(submit).not.toHaveBeenCalled());
+});
+
+it('creates a DWD draft with the verified process and the entered model details', async () => {
+  const { submit } = setup();
+  await screen.findByText('下单 · 每笔订单');
+  fireEvent.mouseDown(screen.getByLabelText('数仓目标分层'));
+  fireEvent.click(await screen.findByText('明细层（DWD）'));
+  expect(await screen.findByText('新建 DWD 明细模型')).toBeInTheDocument();
+  expect(screen.queryByText(/本次创建仅保存物理模型定义/)).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('物理模型名称'), { target: { value: '订单明细' } });
+  fireEvent.change(screen.getByLabelText('物理模型编码'), { target: { value: 'dwd_order_detail' } });
+  fireEvent.click(screen.getByRole('button', { name: '创建模型' }));
+  await waitFor(() => expect(submit).toHaveBeenCalledWith({ base: expect.objectContaining({
+    name: '订单明细', code: 'dwd_order_detail', layerCode: 'DWD', processId: 71, domainId: 1, dialect: 'MYSQL',
+  }) }));
 });
 
 it('does not use a URL process ID as authorization if the Semantic owner catalog cannot resolve it', async () => {

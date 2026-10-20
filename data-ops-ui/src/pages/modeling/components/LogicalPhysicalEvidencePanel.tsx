@@ -1,5 +1,6 @@
-import { Alert, Button, Card, Empty, Select, Space, Spin, Table, Tag, Typography } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { Alert, Card, Collapse, Descriptions, Select, Spin, Table, Tag, Typography } from 'antd';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { YakButton, YakEmpty } from '@/components/ui';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import {
@@ -11,10 +12,21 @@ import type {
 import type { ModelingModelRecord } from '@/services/modeling/types';
 import { logicalDraftNavigationPath, parseLogicalPhysicalHint } from '@/utils/logicalPhysicalJourney';
 
-/**
- * FE-A3: uses existing Modeling Owner read-only version / physical-preview APIs.
- * No creation, persistence, "mapping approved" or DataDev task write endpoint.
- */
+const RESULT_LABELS: Record<string, string> = {
+  CANDIDATE_ONLY: '可供对照',
+  CANDIDATE: '可供对照',
+  MISSING_STANDARD: '未关联标准字段',
+  INVALID_STANDARD: '标准字段不可用',
+  AMBIGUOUS_PHYSICAL_REFERENCE: '物理字段待确认',
+  NO_LOGICAL_REFERENCE: '缺少逻辑属性',
+  AMBIGUOUS_LOGICAL_REFERENCE: '逻辑属性待确认',
+  MISSING_LOGICAL_STANDARD: '逻辑属性未关联标准',
+  INVALID_LOGICAL_STANDARD: '逻辑标准不可用',
+  LOGICAL_ATTRIBUTE_UNMAPPED: '缺少物理字段',
+};
+const isCandidate = (result: string) => result === 'CANDIDATE_ONLY' || result === 'CANDIDATE';
+
+/** Compares exact Owner versions without persisting or approving a mapping. */
 export default function LogicalPhysicalEvidencePanel({
   model, search, onNavigateLogical,
 }: {
@@ -37,6 +49,11 @@ export default function LogicalPhysicalEvidencePanel({
   const [loading, setLoading] = useState(false);
   const [versionLoading, setVersionLoading] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [catalogAttempt, setCatalogAttempt] = useState(0);
+  const [versionAttempt, setVersionAttempt] = useState(0);
+  const previewRequest = useRef(0);
+  const activeScope = useRef(scope);
+  activeScope.current = scope;
 
   const q = useMemo(() => new URLSearchParams(search), [search]);
   const hinted = parseLogicalPhysicalHint(q, physicalId);
@@ -51,63 +68,70 @@ export default function LogicalPhysicalEvidencePanel({
   const ready = preview?.scope === scope && preview.logicalId === selected && preview.versionNo === version
     ? preview.data : undefined;
 
+  const clearPreview = () => {
+    previewRequest.current += 1;
+    setPreview(undefined);
+    setPreviewError(undefined);
+    setPreviewLoading(false);
+  };
+
   useEffect(() => {
     setCatalog(undefined);
     setSelection(undefined);
     setVersions(undefined);
-    setPreview(undefined);
-    setPreviewError(undefined);
-    if (!validModel) return;
+    clearPreview();
+    setVersionLoading(false);
+    if (!validModel) { setLoading(false); return; }
     let live = true;
     setLoading(true);
     void listLogicalDrafts().then((items) => {
       if (!live) return;
       const sameProcess = (items || []).filter(item => item.processId === processId);
       setCatalog({ scope, drafts: sameProcess });
-      // Deep links are hints only. Never fall back to the first/same-named
-      // logical draft when the explicitly requested ID is unavailable.
+      // A deep link must resolve to the requested identity, never a same-named replacement.
       if (hinted && hinted.processId === processId && hinted.physicalId === physicalId
           && sameProcess.some(item => item.id === hinted.logicalId)) {
         setSelection({ scope, logicalId: hinted.logicalId, versionNo: hinted.logicalVersionNo });
       }
     }).catch(() => {
-      if (live) setCatalog({ scope, drafts: [], error: '当前项目的逻辑草稿目录读取失败；不会猜测映射关系。' });
+      if (live) setCatalog({ scope, drafts: [], error: '逻辑模型加载失败，请重试。' });
     }).finally(() => { if (live) setLoading(false); });
-    return () => { live = false; };
-  }, [scope, validModel, physicalId, processId, hinted?.logicalId, hinted?.logicalVersionNo, hinted?.processId]);
+    return () => { live = false; previewRequest.current += 1; };
+  }, [scope, validModel, physicalId, processId, hinted?.logicalId, hinted?.logicalVersionNo, hinted?.processId, catalogAttempt]);
 
   useEffect(() => {
     setVersions(undefined);
-    setPreview(undefined);
-    if (!validModel || selected == null) return;
+    clearPreview();
+    if (!validModel || selected == null) { setVersionLoading(false); return; }
     let live = true;
     setVersionLoading(true);
-    // The list alone cannot establish this draft's process identity. Re-read
-    // the exact Owner draft before accepting its frozen versions.
+    // Re-read the exact Owner draft before accepting its design versions.
     void Promise.all([getLogicalDraft(selected), listLogicalVersions(selected)])
       .then(([draft, items]) => {
         if (!live) return;
         if (draft.model.id !== selected || draft.model.processId !== processId
             || !drafts.some(x => x.id === selected)) throw new Error('Logical Owner scope mismatch');
         const versionsForDraft = (items || []).filter(x =>
-          Number.isSafeInteger(x.versionNo) && x.versionNo > 0);
+          Number.isSafeInteger(x.versionNo) && x.versionNo > 0)
+          .sort((a, b) => b.versionNo - a.versionNo);
         setVersions({ scope, logicalId: selected, items: versionsForDraft });
       }).catch(() => {
-        if (live) setVersions({ scope, logicalId: selected, items: [], error: '无法核验指定逻辑草稿及其冻结版本。' });
+        if (live) setVersions({ scope, logicalId: selected, items: [], error: '设计版本加载失败，请重试。' });
       }).finally(() => { if (live) setVersionLoading(false); });
     return () => { live = false; };
-  }, [scope, validModel, selected, processId, drafts]);
+  }, [scope, validModel, selected, processId, drafts, versionAttempt]);
 
   const prepare = async () => {
     if (!validModel || selected == null || version == null
         || !frozenVersions.some(x => x.versionNo === version)) return;
     const requestScope = scope;
+    const requestId = ++previewRequest.current;
     setPreview(undefined);
     setPreviewError(undefined);
     setPreviewLoading(true);
     try {
       const evidence = await previewLogicalPhysical(selected, version, physicalId);
-      if (requestScope !== scope) return;
+      if (requestScope !== activeScope.current || requestId !== previewRequest.current) return;
       if (evidence.logicalModelId !== selected || evidence.logicalVersionNo !== version
           || evidence.physicalModelId !== physicalId
           || !/^[a-fA-F0-9]{64}$/.test(evidence.logicalSnapshotSha256)
@@ -117,88 +141,111 @@ export default function LogicalPhysicalEvidencePanel({
       }
       setPreview({ scope, logicalId: selected, versionNo: version, data: evidence });
     } catch {
-      setPreviewError({ scope, text: '模型证据已变化、缺失或未通过身份校验；请核对版本后重新预检。' });
-    } finally { setPreviewLoading(false); }
+      if (requestScope === activeScope.current && requestId === previewRequest.current) {
+        setPreviewError({ scope, text: '模型或版本信息已变化，请核对后重新对照。' });
+      }
+    } finally {
+      if (requestScope === activeScope.current && requestId === previewRequest.current) setPreviewLoading(false);
+    }
   };
 
-  if (!supported) return <Alert showIcon type="info" message="ODS 或其他分层遵循独立的建模前置路径"
-    description="ODS 以已核验源表直接建模；本区域的冻结逻辑版本到物理模型预检仅适用于 DWD/DIM，不新增发布门禁。" />;
+  const openLogical = () => {
+    const path = selected == null ? `/modeling/logical?processId=${processId}`
+      : logicalDraftNavigationPath(processId!, selected);
+    if (path) onNavigateLogical(path);
+  };
+
+  if (!supported) return <YakEmpty compact title="该分层无需逻辑模型对照"
+    description={(model?.layerCode || '').toUpperCase() === 'ODS' ? 'ODS 模型可直接从来源表设计。' : '此处支持 DWD、DIM 模型。'} />;
   if (!allowed || !currentProject?.id) return <Alert showIcon type="warning"
-    message="没有当前项目的建模读取权限，不能打开逻辑与物理审阅" />;
-  if (!validModel) return <Alert showIcon type="warning"
-    message="当前物理模型没有可核验的业务过程关联"
-    description="先在真实模型 Owner 中确认过程及 DWD/DIM 身份，不使用 URL 推断其逻辑依据。" />;
+    message="暂无当前项目的建模查看权限" />;
+  if (!validModel) return <YakEmpty compact title="请先关联业务过程"
+    description="在模型基本信息中选择业务过程后，可对照相关逻辑模型。" />;
 
   const selectedDraft = drafts.find(x => x.id === selected);
-  return <Card className="max-w-[1050px]" title="业务逻辑依据 · 冻结版本对照"
-    extra={<Tag color="blue">只读审阅 · 不保存映射</Tag>}>
-    <Alert className="mb-4" showIcon type="info"
-      message={`当前物理模型 #${physicalId} · 业务过程 #${processId}`}
-      description="先确认业务逻辑模型及其冻结版本，再与当前物理结构对照。相同业务过程或标准字段不代表已建立正式逻辑↔物理映射；预检不能创建物理表、发布模型或触发数据加工。" />
-    {hasHint && (!hinted || hinted.processId !== processId
-        || (catalog?.scope === scope && !drafts.some(x => x.id === hinted?.logicalId))) ? (
-      <Alert className="mb-4" showIcon type="warning"
-        message="指定逻辑模型或版本来源不符合当前物理模型的业务过程"
-        description="不会自动降级到其他同名逻辑草稿。请从有权访问的当前过程模型中手动选择。" />
-    ) : null}
-    {catalog?.scope === scope && catalog.error ? <Alert className="mb-3" showIcon type="error" message={catalog.error} /> : null}
+  const catalogError = catalog?.scope === scope ? catalog.error : undefined;
+  const versionError = versions?.scope === scope ? versions.error : undefined;
+  const invalidHint = hasHint && (!hinted || hinted.processId !== processId
+    || (catalog?.scope === scope && !drafts.some(x => x.id === hinted.logicalId)));
+  const missingVersion = hasHint && selected != null && version != null && versions?.scope === scope
+    && !versionLoading && !versionError && !frozenVersions.some(x => x.versionNo === version);
+  return <Card className="max-w-[1050px]" title="逻辑模型对照" extra={<Tag>只读</Tag>}>
+    <Typography.Paragraph type="secondary" className="!mb-5">
+      选择逻辑设计版本，查看物理字段对应的业务实体与属性。
+    </Typography.Paragraph>
+    {invalidHint ? <Alert className="mb-4" showIcon type="warning"
+      message="指定逻辑模型不可用，请重新选择" /> : null}
+    {catalogError ? <Alert className="mb-4" showIcon type="error" message={catalogError}
+      action={<YakButton size="small" onClick={() => setCatalogAttempt(x => x + 1)}>重新加载</YakButton>} /> : null}
     <div className="flex flex-wrap items-end gap-3">
-      <div className="min-w-[230px] flex-1">
-        <Typography.Text className="mb-2 block" type="secondary">当前业务过程的逻辑草稿</Typography.Text>
-        <Select showSearch optionFilterProp="label" className="w-full" loading={loading}
-          placeholder={loading ? '正在读取逻辑草稿…' : '明确选择一个逻辑草稿'}
-          value={selected} disabled={loading || !!catalog?.error}
-          options={drafts.map(x => ({ value: x.id, label: `${x.name} · ${x.code} (#${x.id})` }))}
-          onChange={id => { setSelection({ scope, logicalId: id }); setPreview(undefined); setPreviewError(undefined); }}
-        />
+      <div className="min-w-[230px] flex-[2]">
+        <label htmlFor="logical-evidence-model" className="mb-2 block text-sm">逻辑模型</label>
+        <Select id="logical-evidence-model" showSearch optionFilterProp="label" className="w-full" loading={loading}
+          placeholder={loading ? '正在加载…' : '选择当前业务过程的逻辑模型'}
+          value={selected} disabled={loading || !!catalogError}
+          options={drafts.map(x => ({ value: x.id, label: `${x.name} · ${x.code}` }))}
+          onChange={id => { clearPreview(); setSelection({ scope, logicalId: id }); }} />
       </div>
-      <div className="min-w-[180px] flex-1">
-        <Typography.Text className="mb-2 block" type="secondary">真实冻结版本</Typography.Text>
-        <Select className="w-full" placeholder="选择冻结版本" loading={versionLoading}
+      <div className="min-w-[170px] flex-1">
+        <label htmlFor="logical-evidence-version" className="mb-2 block text-sm">设计版本</label>
+        <Select id="logical-evidence-version" className="w-full" placeholder="选择已保存版本" loading={versionLoading}
           value={version && frozenVersions.some(x => x.versionNo === version) ? version : undefined}
           disabled={!selected || versionLoading || !frozenVersions.length}
-          options={frozenVersions.map(x => ({ value: x.versionNo, label: `逻辑 V${x.versionNo} · #${x.id}` }))}
-          onChange={n => { setSelection({ scope, logicalId: selected, versionNo: n }); setPreview(undefined); setPreviewError(undefined); }} />
+          options={frozenVersions.map(x => ({ value: x.versionNo, label: `V${x.versionNo}` }))}
+          onChange={n => { clearPreview(); setSelection({ scope, logicalId: selected, versionNo: n }); }} />
       </div>
-      <Button type="primary" loading={previewLoading}
+      <YakButton type="primary" loading={previewLoading}
         disabled={!selected || !version || !frozenVersions.some(x => x.versionNo === version) || previewLoading}
-        onClick={() => void prepare()}>预检逻辑↔物理（只读）</Button>
-      {selectedDraft ? <Button onClick={() => {
-        const path = logicalDraftNavigationPath(processId!, selectedDraft.id);
-        if (path) onNavigateLogical(path);
-      }}>返回此逻辑草稿</Button> : null}
+        onClick={() => void prepare()}>开始对照</YakButton>
+      {selectedDraft ? <YakButton onClick={openLogical}>打开逻辑模型</YakButton> : null}
     </div>
-    {versions?.scope === scope && versions.error ? <Alert className="mt-4" showIcon type="warning" message={versions.error} /> : null}
-    {hasHint && selected != null && version != null && versions?.scope === scope
-      && !versionLoading && !frozenVersions.some(x => x.versionNo === version)
-      ? <Alert className="mt-4" showIcon type="warning" message="指定冻结版本不存在于当前逻辑模型；不能替换成最新版本。" /> : null}
-    {catalog?.scope === scope && !loading && drafts.length === 0 && !catalog.error
-      ? <Empty description="该业务过程尚无可读取的逻辑设计；请先在业务逻辑模型页建立草稿并冻结版本。" /> : null}
+    {versionError ? <Alert className="mt-4" showIcon type="error" message={versionError}
+      action={<YakButton size="small" onClick={() => setVersionAttempt(x => x + 1)}>重新加载</YakButton>} /> : null}
+    {missingVersion ? <Alert className="mt-4" showIcon type="warning" message="该设计版本不可用，请重新选择" /> : null}
+    {catalog?.scope === scope && !loading && !drafts.length && !catalogError
+      ? <YakEmpty compact className="mt-4" title="暂无相关逻辑模型" description="先为当前业务过程建立逻辑设计。">
+        <YakButton onClick={openLogical}>前往逻辑建模</YakButton>
+      </YakEmpty> : null}
+    {selectedDraft && versions?.scope === scope && !versionLoading && !frozenVersions.length && !versionError
+      ? <div className="mt-4 rounded-lg border border-dashed border-[#dfe3e8] px-4 py-3 text-sm text-[#667085]">
+        该模型还没有设计版本，请打开逻辑模型并保存设计版本后再对照。
+      </div> : null}
     {previewError?.scope === scope ? <Alert className="mt-4" type="error" showIcon message={previewError.text} /> : null}
     <Spin spinning={previewLoading}>
       {ready ? <div className="mt-5">
-        <Alert showIcon type={ready.readyForReview && !ready.blockers.length ? 'info' : 'warning'}
-          message={ready.readyForReview && !ready.blockers.length ? '当前证据可供人工对照（不是正式映射）' : '存在阻断项，需要返回逻辑或物理设计核对'}
-          description={`冻结逻辑 V${ready.logicalVersionNo} 与当前物理 ${ready.physicalStatus} 结构的只读比较；只有明确的模型和版本身份能够进入此报告。`} />
-        <div className="mt-3 flex flex-wrap gap-3 text-xs text-[#667085]">
-          <span>逻辑快照：<Typography.Text copyable={{ text: ready.logicalSnapshotSha256 }}>{ready.logicalSnapshotSha256.slice(0,16)}…</Typography.Text></span>
-          <span>物理结构：<Typography.Text copyable={{ text: ready.physicalStructureSha256 }}>{ready.physicalStructureSha256.slice(0,16)}…</Typography.Text></span>
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#f7f8fa] px-4 py-3" role="status">
+          <div className="flex flex-wrap items-center gap-2">
+            <Typography.Text strong>V{ready.logicalVersionNo} 对照结果</Typography.Text>
+            <Tag color={ready.readyForReview && !ready.blockers.length ? 'blue' : 'gold'}>
+              {ready.readyForReview && !ready.blockers.length ? '可供人工对照' : '待完善'}
+            </Tag>
+          </div>
+          <Typography.Text type="secondary">{ready.columns.length} 项 · {ready.columns.filter(x => !isCandidate(x.result)).length} 项待处理</Typography.Text>
         </div>
-        {ready.blockers.map((x,i) => <Alert key={i} className="mt-2" showIcon type="warning" message={x} />)}
+        {ready.blockers.length ? <Alert className="mt-3" showIcon type="warning" message="请处理以下问题后重新对照"
+          description={<ul className="m-0 pl-4">{ready.blockers.map((x, i) => <li key={`${i}-${x}`}>{x}</li>)}</ul>} /> : null}
         <Table className="mt-4" size="small" scroll={{ x: 790 }}
-          rowKey={(x,i) => String(x.physicalColumnId ?? `candidate-${i}`)}
-          pagination={{ pageSize: 10 }}
-          dataSource={ready.columns}
+          rowKey={(x, i) => String(x.physicalColumnId ?? `candidate-${i}`)}
+          pagination={{ pageSize: 10, hideOnSinglePage: true }} dataSource={ready.columns}
           columns={[
-            { title: '物理字段', dataIndex: 'physicalColumn', width: 180 },
-            { title: '逻辑实体', dataIndex: 'logicalEntity', width: 140, render: (x?: string) => x || '未确认' },
-            { title: '逻辑属性', dataIndex: 'logicalAttribute', width: 140, render: (x?: string) => x || '未确认' },
-            { title: '对照结果', dataIndex: 'result', width: 130, render: (x: string) => <Tag>{x}</Tag> },
-            { title: '原因与限制', dataIndex: 'reason' },
+            { title: '物理字段', dataIndex: 'physicalColumn', width: 170, render: (x?: string) => x || '—' },
+            { title: '逻辑实体', dataIndex: 'logicalEntity', width: 140, render: (x?: string) => x || '未关联' },
+            { title: '逻辑属性', dataIndex: 'logicalAttribute', width: 140, render: (x?: string) => x || '未关联' },
+            { title: '对照结果', dataIndex: 'result', width: 160, render: (x: string) => <Tag color={isCandidate(x) ? 'blue' : 'gold'}>{RESULT_LABELS[x] || x}</Tag> },
+            { title: '说明', dataIndex: 'reason' },
           ]} />
-        <Typography.Paragraph type="secondary" className="!mt-3 !mb-0">
-          仅展示实时证据，不持久化逐字段选择。人工正式映射、版本绑定、审批及加工任务来源需由 DR-06/DR-07 独立合同批准。
+        <Typography.Paragraph type="secondary" className="!mt-3 !mb-3 text-xs">
+          对照结果供设计参考，不保存字段映射。
         </Typography.Paragraph>
+        <Collapse ghost size="small" items={[{ key: 'identity', label: '版本与核验信息', children: (
+          <Descriptions size="small" column={1}>
+            <Descriptions.Item label="逻辑模型">{selectedDraft?.name} · #{ready.logicalModelId} · V{ready.logicalVersionNo}</Descriptions.Item>
+            <Descriptions.Item label="物理模型">{model?.name} · #{ready.physicalModelId}</Descriptions.Item>
+            <Descriptions.Item label="业务过程">#{processId}</Descriptions.Item>
+            <Descriptions.Item label="逻辑版本摘要"><Typography.Text className="break-all" copyable>{ready.logicalSnapshotSha256}</Typography.Text></Descriptions.Item>
+            <Descriptions.Item label="物理结构摘要"><Typography.Text className="break-all" copyable>{ready.physicalStructureSha256}</Typography.Text></Descriptions.Item>
+          </Descriptions>
+        ) }]} />
       </div> : null}
     </Spin>
   </Card>;

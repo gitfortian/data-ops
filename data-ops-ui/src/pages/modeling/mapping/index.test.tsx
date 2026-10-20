@@ -1,9 +1,11 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { Modal, message } from 'antd';
 import MappingPage from './index';
 import { getModelingMappingContext, listModelingMappings, setModelingMapping,
   previewOdsMappingReconcile, confirmOdsMappingReconcile, inspectOdsSourceEvidence } from '@/services/modeling/mapping';
-import { getModelingModel } from '@/services/modeling/api';
+import { getModelingModel, getModelingStructure } from '@/services/modeling/api';
+import { previewModelingImportColumns } from '@/services/modeling/import';
 
 let mockProjectId = 1;
 jest.mock('@/contexts/SecurityProjectContext', () => ({ useSecurityProject: () => ({ currentProject: { id: mockProjectId } }) }));
@@ -30,10 +32,12 @@ jest.mock('@/services/modeling/mapping', () => ({ listModelingMappings: jest.fn(
 const saved = { targetColumn: 'user_id', dataType: 'BIGINT', mapped: true, sourceDatasourceId: 9, sourceDatabase: 'db', sourceTable: 'users', sourceColumn: 'old', transformExpr: 'CAST(old AS BIGINT)' };
 beforeEach(() => {
   jest.clearAllMocks(); mockProjectId = 1;
+  (getModelingModel as jest.Mock).mockResolvedValue({ id: 7, code: 'users', name: '用户', layerCode: 'DWD', status: 'DRAFT' });
   (listModelingMappings as jest.Mock).mockResolvedValue([saved]);
   (getModelingMappingContext as jest.Mock).mockResolvedValue({ definition: 'baseline', mapping: saved });
   (setModelingMapping as jest.Mock).mockResolvedValue(true);
 });
+afterEach(() => { Modal.destroyAll(); message.destroy(); });
 it('adopts into the original form, clears an old expression, then manually saves with the loaded baseline and reloads', async () => {
   render(<MappingPage />);
   fireEvent.click(await screen.findByText('编辑'));
@@ -106,4 +110,89 @@ it('published ODS source inspection shows a read-only report, not a repair actio
   expect(confirmOdsMappingReconcile).not.toHaveBeenCalled();
   expect(setModelingMapping).not.toHaveBeenCalled();
   expect(screen.queryByText('ODS 来源映射批量核验/修复')).not.toBeInTheDocument();
+});
+
+it('filters DWD fields by mapping state and source search without changing saved mappings', async () => {
+  (listModelingMappings as jest.Mock).mockResolvedValue([saved, { targetColumn: 'email', dataType: 'STRING', mapped: false }]);
+  render(<MappingPage />);
+  await screen.findByText('email');
+  fireEvent.click(screen.getByText('待映射 1'));
+  expect(screen.queryByText('user_id')).not.toBeInTheDocument();
+  expect(screen.getByText('email')).toBeInTheDocument();
+  fireEvent.click(screen.getByText('全部 2'));
+  fireEvent.change(screen.getByRole('searchbox', { name: '搜索字段映射' }), { target: { value: 'users' } });
+  expect(screen.getByText('user_id')).toBeInTheDocument();
+  expect(screen.queryByText('email')).not.toBeInTheDocument();
+  expect(setModelingMapping).not.toHaveBeenCalled();
+});
+
+it('protects a changed DWD mapping on cancel and reports its unsaved editor state', async () => {
+  const changed = jest.fn();
+  render(<MappingPage layerCode="DWD" onEditorStateChange={changed} />);
+  fireEvent.click(await screen.findByText('编辑'));
+  const dialog = within(await screen.findByRole('dialog', { name: '字段映射 · user_id' }));
+  const expression = dialog.getByPlaceholderText('留空则直接使用源字段');
+  await waitFor(() => expect(expression).toHaveValue('CAST(old AS BIGINT)'));
+  await waitFor(() => expect(changed).toHaveBeenLastCalledWith({ loading: false, saving: false, dirty: false }));
+  fireEvent.change(expression, { target: { value: 'old + 1' } });
+  await waitFor(() => expect(changed).toHaveBeenLastCalledWith({ loading: false, saving: false, dirty: true }));
+  fireEvent.click(dialog.getByRole('button', { name: /^取\s*消$/ }));
+  expect((await screen.findAllByText('放弃未保存的映射？')).length).toBeGreaterThan(0);
+  fireEvent.click(screen.getByRole('button', { name: '继续编辑' }));
+  expect(expression).toHaveValue('old + 1');
+  expect(setModelingMapping).not.toHaveBeenCalled();
+  await waitFor(() => expect(screen.queryAllByText('放弃未保存的映射？')).toHaveLength(0));
+  fireEvent.click(dialog.getByRole('button', { name: /^取\s*消$/ }));
+  fireEvent.click(await screen.findByRole('button', { name: '放弃修改' }));
+  await waitFor(() => expect(changed).toHaveBeenLastCalledWith({ loading: false, saving: false, dirty: false }));
+  expect(screen.queryByRole('dialog', { name: '字段映射 · user_id' })).not.toBeInTheDocument();
+});
+
+it('retains DWD input and displays a failed conditional save in the editor', async () => {
+  (setModelingMapping as jest.Mock).mockRejectedValueOnce(new Error('字段映射版本已变化'));
+  render(<MappingPage />);
+  fireEvent.click(await screen.findByText('编辑'));
+  const dialog = within(await screen.findByRole('dialog', { name: '字段映射 · user_id' }));
+  const expression = dialog.getByPlaceholderText('留空则直接使用源字段');
+  await waitFor(() => expect(expression).toHaveValue('CAST(old AS BIGINT)'));
+  fireEvent.change(expression, { target: { value: 'old + 2' } });
+  fireEvent.click(dialog.getByRole('button', { name: /^保\s*存$/ }));
+  expect(await dialog.findByText('字段映射版本已变化')).toBeInTheDocument();
+  expect(expression).toHaveValue('old + 2');
+  expect(screen.getByRole('dialog', { name: '字段映射 · user_id' })).toBeInTheDocument();
+});
+
+it('retries a failed DWD catalog read without reporting an empty model', async () => {
+  (getModelingStructure as jest.Mock).mockRejectedValueOnce(new Error('读取暂不可用'));
+  render(<MappingPage layerCode="DWD" />);
+  expect(await screen.findByText('来源映射读取失败')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '重新读取' }));
+  expect(await screen.findByText('user_id')).toBeInTheDocument();
+  expect(screen.queryByText('来源映射读取失败')).not.toBeInTheDocument();
+});
+
+it('keeps a source field lookup failure visible and can retry within the same editor', async () => {
+  (previewModelingImportColumns as jest.Mock).mockRejectedValueOnce(new Error('来源字段读取暂不可用'));
+  render(<MappingPage />);
+  fireEvent.click(await screen.findByText('编辑'));
+  const dialog = within(await screen.findByRole('dialog', { name: '字段映射 · user_id' }));
+  expect(await dialog.findByText('来源字段读取失败')).toBeInTheDocument();
+  fireEvent.click(dialog.getByRole('button', { name: '重试字段' }));
+  await waitFor(() => expect(dialog.queryByText('来源字段读取失败')).not.toBeInTheDocument());
+  expect(dialog.getByPlaceholderText('留空则直接使用源字段')).toHaveValue('CAST(old AS BIGINT)');
+});
+
+it('saves a DWD expression without retaining a source identity from the other mode', async () => {
+  render(<MappingPage />);
+  fireEvent.click(await screen.findByText('编辑'));
+  const dialog = within(await screen.findByRole('dialog', { name: '字段映射 · user_id' }));
+  await waitFor(() => expect(dialog.getByPlaceholderText('留空则直接使用源字段')).toHaveValue('CAST(old AS BIGINT)'));
+  fireEvent.click(dialog.getByText('表达式'));
+  fireEvent.change(dialog.getByPlaceholderText("CURRENT_TIMESTAMP、NOW() 或 'fixed_value'"), { target: { value: "'unknown'" } });
+  const save = dialog.getByRole('button', { name: /^保\s*存$/ });
+  fireEvent.click(save); fireEvent.click(save);
+  await waitFor(() => expect(setModelingMapping).toHaveBeenCalledTimes(1));
+  expect(setModelingMapping).toHaveBeenCalledWith('7', 'user_id', {
+    sourceDatasourceId: null, sourceDatabase: null, sourceTable: null, sourceColumn: null, transformExpr: "'unknown'",
+  }, 'baseline');
 });

@@ -29,7 +29,7 @@ it('covers the complete five-step manual modeling path without claiming a Runtim
   const published = deriveManualJourney({ ...facts, verifiedPublishedReceipt: true });
   expect(published.step).toBe(5);
   expect(published.complete).toBe(true);
-  expect(published.explanation).toContain('未创建任务或执行 SQL');
+  expect(published.explanation).toContain('数据加工请在开发工作台继续');
 });
 
 it('selects an existing logical draft instead of proposing a duplicate creation', () => {
@@ -69,7 +69,7 @@ it('does not mistake a pending approval for successful design publication', () =
   expect(pending.step).toBe(4);
   expect(pending.complete).toBe(false);
   expect(pending.blocked).toBe(true);
-  expect(pending.explanation).toContain('不能把设计标记为已发布');
+  expect(pending.explanation).toContain('审批通过前，设计仍未发布');
 });
 
 it('forces unsafe or unavailable mapping evidence through explicit recovery', () => {
@@ -99,5 +99,5 @@ it('does not confuse a saved mutable draft with an immutable revision', () => {
   const saved = deriveManualJourney({ ...facts, mappingFrozenMatches: false });
   expect(saved.step).toBe(3);
   expect(saved.complete).toBe(false);
-  expect(saved.action).toContain('MappingRevision');
+  expect(saved.action).toBe('保存映射版本');
 });

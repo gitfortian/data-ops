@@ -1,4 +1,4 @@
-import { Alert, Button, Modal, Space, Table, Tag, Typography, message } from 'antd';
+import { Alert, Button, Collapse, Descriptions, Empty, Input, Modal, Segmented, Space, Table, Tag, Typography, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { comparePhysicalGovernance, type PhysicalGovernanceBaseline } from '../governanceRecheck';
@@ -10,6 +10,8 @@ import {
 
 interface Props {
   modelId: number;
+  /** Opt-in presentation for the DWD editor; other layers retain their existing view. */
+  layerCode?: string;
   open: boolean;
   onClose: () => void;
   /** Navigation only; report column identity is revalidated in the editor. */
@@ -19,36 +21,54 @@ interface Props {
 }
 
 /** Read-only evidence of current physical-field standards. NOT a publish gate. */
-export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, onLocateColumn, baseline }: Props) {
+export default function PhysicalStandardCoveragePanel({ modelId, layerCode, open, onClose, onLocateColumn, baseline }: Props) {
   const { currentProject } = useSecurityProject();
+  const isDwd = layerCode?.toUpperCase() === 'DWD';
+  const scope = JSON.stringify([modelId, currentProject?.id, open, layerCode]);
+  const [loadedScope, setLoadedScope] = useState<string>();
   const [report, setReport] = useState<PhysicalStandardCoverageInspection>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [reloadKey, setReloadKey] = useState(0);
+  const [keyword, setKeyword] = useState('');
+  const [columnView, setColumnView] = useState<'issues' | 'all'>('issues');
+
+  const needsReview = (column: PhysicalStandardCoverageInspection['columns'][number]) =>
+    column.status !== 'ENABLED_NOW' || Boolean(column.dataStandards && column.dataStandards.status !== 'COMPLETE_NOW');
 
   useEffect(() => {
     let active = true;
     setReport(undefined);
     setError(undefined);
+    setKeyword('');
     if (!open) { setLoading(false); return () => { active = false; }; }
     setLoading(true);
     void inspectPhysicalStandardCoverage(modelId).then((result) => {
       if (active) {
+        setLoadedScope(scope);
         if (result.modelId !== modelId) setError('标准覆盖报告模型身份与当前编辑器不一致，不能用于治理');
-        else setReport(result);
+        else if (isDwd && result.layerCode !== 'DWD') setError('报告分层与当前 DWD 模型不一致，请重新检查。');
+        else if (isDwd && (!Array.isArray(result.columns) || !Array.isArray(result.findings) || !Array.isArray(result.limitations))) {
+          setError('标准检查结果不完整，请重新检查。');
+        }
+        else {
+          setReport(result);
+          if (isDwd) setColumnView(result.columns.some(needsReview) ? 'issues' : 'all');
+        }
       }
     }).catch((error: unknown) => {
       if (active) {
         const reason = error instanceof Error ? error.message
           : '标准目录或项目模型不可访问，不能将错误视作覆盖合格';
+        setLoadedScope(scope);
         setError(reason);
-        message.error(reason);
+        if (!isDwd) message.error(reason);
       }
     }).finally(() => {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [open, modelId, currentProject?.id, reloadKey]);
+  }, [open, modelId, currentProject?.id, layerCode, reloadKey]);
 
   const feedback = report && baseline ? comparePhysicalGovernance(baseline, report) : undefined;
   const referenceLabel = (ref: PhysicalStandardReferenceEvidence): string => {
@@ -81,6 +101,123 @@ export default function PhysicalStandardCoveragePanel({ modelId, open, onClose, 
       default: return '需要人工核验';
     }
   };
+
+  if (isDwd) {
+    const current = loadedScope === scope ? report : undefined;
+    const currentError = loadedScope === scope ? error : undefined;
+    const currentFeedback = current && baseline ? comparePhysicalGovernance(baseline, current) : undefined;
+    const issueColumns = current?.columns.filter(needsReview) ?? [];
+    const search = keyword.trim().toLowerCase();
+    const visibleColumns = (columnView === 'issues' ? issueColumns : current?.columns ?? [])
+      .filter(column => `${column.columnName} ${column.standardName || ''} ${column.dataType}`.toLowerCase().includes(search));
+    const statusLabels: Record<string, string> = {
+      ENABLED_NOW: '标准字段有效', MISSING_STANDARD: '未关联标准字段',
+      INVALID_STANDARD: '标准字段不可用', AGGREGATE_REVIEW: '需确认业务角色',
+    };
+    const renderStandards = (column: PhysicalStandardCoverageInspection['columns'][number]) => {
+      const evidence = column.dataStandards;
+      return <Descriptions size="small" column={1}>
+        <Descriptions.Item label="物理列身份">{column.columnId}</Descriptions.Item>
+        <Descriptions.Item label="标准字段身份">{column.stdFieldId ?? '未关联'}</Descriptions.Item>
+        <Descriptions.Item label="业务语义角色">{column.semanticRole || '未设置'}</Descriptions.Item>
+        <Descriptions.Item label="物理分析角色">{column.physicalRole || '未设置'}</Descriptions.Item>
+        {column.aggregateFunc && <Descriptions.Item label="聚合方式">{column.aggregateFunc}</Descriptions.Item>}
+        {evidence ? <>
+          <Descriptions.Item label="类型标准">{referenceLabel(evidence.typeStandard)}</Descriptions.Item>
+          {evidence.unitStandard && <Descriptions.Item label="单位标准">{referenceLabel(evidence.unitStandard)}</Descriptions.Item>}
+          {evidence.caliberStandard && <Descriptions.Item label="口径标准">{referenceLabel(evidence.caliberStandard)}</Descriptions.Item>}
+          {evidence.securityStandard && <Descriptions.Item label="安全标准">{referenceLabel(evidence.securityStandard)}</Descriptions.Item>}
+          {evidence.codeSetStatus !== 'NOT_APPLICABLE' && <Descriptions.Item label="码集">
+            {evidence.codeSetCode || '未配置'} · {codeSetStatusLabel(evidence.codeSetStatus)}
+            {typeof evidence.codeSetItemCount === 'number' && typeof evidence.codeSetEnabledItemCount === 'number'
+              ? `（启用 ${evidence.codeSetEnabledItemCount}/${evidence.codeSetItemCount}）` : ''}
+          </Descriptions.Item>}
+          {evidence.codeSetEvidenceSha256 && <Descriptions.Item label="码集内容摘要">
+            <Typography.Text style={{ overflowWrap: 'anywhere' }} copyable>{evidence.codeSetEvidenceSha256}</Typography.Text>
+          </Descriptions.Item>}
+          <Descriptions.Item label="数据标准状态">{dataStandardStatusLabel(evidence.status)}</Descriptions.Item>
+          <Descriptions.Item label="数据标准核对结果">{evidence.explanation}</Descriptions.Item>
+        </> : <Descriptions.Item label="关联数据标准">标准字段未确认，暂未读取关联数据标准。</Descriptions.Item>}
+      </Descriptions>;
+    };
+    return <Modal title="DWD 字段标准检查" width={1080} open={open} destroyOnHidden style={{ top: 24 }}
+      styles={{ content: { display: 'flex', flexDirection: 'column', maxHeight: 'calc(100dvh - 48px)' },
+        header: { flexShrink: 0 }, body: { minHeight: 0, overflowY: 'auto' }, footer: { flexShrink: 0, paddingTop: 12 } }}
+      footer={<Space wrap>
+        <Button loading={loading} onClick={() => setReloadKey(key => key + 1)}>重新检查</Button>
+        <Button onClick={onClose}>关闭</Button>
+      </Space>} onCancel={onClose}>
+      {currentError && <Alert className="mb-3" showIcon type="error"
+        message="标准检查未完成" description={currentError}
+        action={<Button size="small" disabled={loading} onClick={() => setReloadKey(key => key + 1)}>重试</Button>} />}
+      {loading && <Typography.Paragraph type="secondary">正在检查已保存字段的标准引用…</Typography.Paragraph>}
+      {current && <>
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <Typography.Text strong>{current.modelCode}</Typography.Text>
+            <Typography.Paragraph type="secondary" className="!mb-0 !mt-1">
+              {current.processName ? `业务过程：${current.processName} · ` : ''}共 {current.columnCount} 个字段，{issueColumns.length} 个字段待处理
+            </Typography.Paragraph>
+          </div>
+          <Tag>{current.status === 'COVERED_NOW' ? '当前引用完整' : '有待确认项'}</Tag>
+        </div>
+        {currentFeedback && <Alert className="mb-3" showIcon
+          type={currentFeedback.state === 'WRONG_OWNER' ? 'error' : 'info'}
+          message={currentFeedback.state === 'CHANGED' ? '检查结果已更新'
+            : currentFeedback.state === 'UNCHANGED' ? '检查结果与上次一致' : '无法比较不同模型的检查结果'}
+          description={currentFeedback.explanation} />}
+        {current.findings.length > 0 && <Alert className="mb-4" showIcon type="warning"
+          message="请完善以下标准引用"
+          description={<ul className="!mb-0 !pl-4">{current.findings.map((finding, index) => <li key={index}>{finding}</li>)}</ul>} />}
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <Segmented aria-label="字段检查范围" value={columnView}
+            options={[{ value: 'issues', label: `待处理 (${issueColumns.length})` }, { value: 'all', label: `全部字段 (${current.columns.length})` }]}
+            onChange={value => setColumnView(value as 'issues' | 'all')} />
+          <Input.Search aria-label="搜索标准检查字段" placeholder="搜索字段、类型或标准名称" allowClear
+            style={{ width: 280, maxWidth: '100%' }} value={keyword} onChange={event => setKeyword(event.target.value)} />
+        </div>
+        <Table size="small" rowKey="columnId" scroll={{ x: 800 }}
+          pagination={{ pageSize: 10, hideOnSinglePage: true, showSizeChanger: false }} dataSource={visibleColumns}
+          locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={search ? '没有匹配的字段' : columnView === 'issues' ? '当前没有待处理字段' : '模型暂无字段'}>
+            {search && <Button size="small" onClick={() => setKeyword('')}>清空搜索</Button>}
+          </Empty> }}
+          expandable={{ expandedRowRender: renderStandards, columnTitle: '详情', columnWidth: 55,
+            expandIcon: ({ expanded, onExpand, record }) => <Button type="link" size="small"
+              aria-label={`${expanded ? '收起' : '查看'} ${record.columnName} 标准详情`}
+              onClick={event => onExpand(record, event)}>{expanded ? '收起' : '展开'}</Button> }}
+          columns={[
+            { title: '物理字段', dataIndex: 'columnName', width: 160,
+              render: (_: unknown, column) => <div><Typography.Text>{column.columnName}</Typography.Text>
+                <div className="text-xs text-gray-500">{column.dataType}</div></div> },
+            { title: '标准字段', dataIndex: 'standardName', width: 150,
+              render: (_: unknown, column) => column.standardName || (column.stdFieldId == null ? '未关联' : `标准字段 #${column.stdFieldId}`) },
+            { title: '当前状态', dataIndex: 'status', width: 150,
+              render: (_: unknown, column) => <Space direction="vertical" size={2}>
+                <Tag color={needsReview(column) ? 'gold' : 'default'}>{statusLabels[column.status] || column.status}</Tag>
+                {column.dataStandards && column.dataStandards.status !== 'COMPLETE_NOW'
+                  && <Typography.Text type="secondary" className="text-xs">{dataStandardStatusLabel(column.dataStandards.status)}</Typography.Text>}
+              </Space> },
+            { title: '核对结果', dataIndex: 'explanation',
+              render: (_: unknown, column) => column.explanation },
+            { title: '操作', key: 'action', width: 120,
+              render: (_: unknown, column) => onLocateColumn && needsReview(column)
+                ? <Button type="link" size="small" onClick={() => onLocateColumn(column, current)}>定位字段</Button> : '—' },
+          ]} />
+        <Collapse ghost className="mt-3" items={[{ key: 'details', label: '核验详情', children: <>
+          <Typography.Paragraph type="secondary">本报告对照当前已保存字段与标准引用，供设计核对使用。</Typography.Paragraph>
+          <Descriptions size="small" column={1}>
+            <Descriptions.Item label="模型身份">{current.modelId} · {current.layerCode} · {current.modelStatus}</Descriptions.Item>
+            <Descriptions.Item label="标准字段">有效 {current.enabledCount} · 缺少 {current.missingCount} · 失效 {current.invalidCount}</Descriptions.Item>
+            <Descriptions.Item label="数据标准">缺少 {current.missingDataStandardCount} · 失效 {current.invalidDataStandardCount} · 待确认 {current.reviewCount}</Descriptions.Item>
+            <Descriptions.Item label="结构摘要"><Typography.Text style={{ overflowWrap: 'anywhere' }} copyable>{current.structureSha256}</Typography.Text></Descriptions.Item>
+            <Descriptions.Item label="检查内容摘要"><Typography.Text style={{ overflowWrap: 'anywhere' }} copyable>{current.evidenceSha256}</Typography.Text></Descriptions.Item>
+          </Descriptions>
+          {current.limitations.map((value, index) => <Typography.Paragraph key={index} type="secondary" className="!mb-1">{value}</Typography.Paragraph>)}
+        </> }]} />
+      </>}
+    </Modal>;
+  }
 
   return (
     <Modal title={report

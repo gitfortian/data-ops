@@ -27,3 +27,15 @@ it('locates missing declarations without treating a stored standard ID as valida
   expect(reminders.missingPrimary.map(item => item.entity.id)).toEqual([12, 13]);
   expect(reminders.pendingRelations.map(item => item.id)).toEqual([51]);
 });
+
+it('keeps large string endpoint identities exact when focusing an entity', () => {
+  const detail = logicalSample();
+  // Exercise a string Java Long returned at the API boundary, beyond safe JS integers.
+  const entityId = '2109169776643895297' as unknown as number;
+  detail.entities[0].entity.id = entityId;
+  detail.relations[0].sourceEntityId = entityId;
+  const view = logicalDesignView(detail, '2109169776643895297');
+  expect(view.entities.map(item => item.entity.id)).toEqual(['2109169776643895297', 12]);
+  expect(view.relations.map(item => item.id)).toEqual([51]);
+  expect(view.unresolved).toEqual([]);
+});

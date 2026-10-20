@@ -92,23 +92,59 @@ it('exposes the canvas budget instead of silently dropping entities and permits 
     entity: { id, logicalModelId: 10, code: `entity_${id}`, name: `实体 ${id}` }, attributes: [],
   });
   render(<LogicalDesignStudio {...props({ detail })} />);
-  expect(screen.getByText(/超过画布 40 个的显示预算/)).toBeInTheDocument();
+  expect(screen.getByText(/当前有 43 个实体，建议使用表格设计/)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '选择实体 实体 1039' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '选择实体 订单' }));
   fireEvent.click(screen.getByText('聚焦关联'));
-  expect(screen.queryByText(/超过画布 40 个的显示预算/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/建议使用表格设计/)).not.toBeInTheDocument();
   expect(screen.getByLabelText('逻辑实体关系画布')).toHaveTextContent('客户');
 });
 
 it('carries a large entity and attribute identity unchanged from a card to the edit callback', async () => {
   const detail = logicalSample();
   detail.entities = [detail.entities[0]]; detail.relations = [];
-  detail.entities[0].entity.id = '2109169776643895297';
-  detail.entities[0].attributes[1].id = '2109169776643895298';
-  detail.entities[0].attributes[1].entityId = '2109169776643895297';
+  // Simulate a string Java Long at the API boundary without changing the owner API types.
+  detail.entities[0].entity.id = '2109169776643895297' as unknown as number;
+  detail.entities[0].attributes[1].id = '2109169776643895298' as unknown as number;
+  detail.entities[0].attributes[1].entityId = '2109169776643895297' as unknown as number;
   const input = props({ detail });
   render(<LogicalDesignStudio {...input} />);
   fireEvent.click(await within(screen.getByLabelText('逻辑实体关系画布')).findByLabelText('定位属性 order.amount'));
   fireEvent.click(screen.getByRole('button', { name: '编辑属性' }));
   expect(input.onEditAttribute).toHaveBeenCalledWith('2109169776643895297', '2109169776643895298');
+});
+
+it('opens the first entity and edits an attribute directly from its list', () => {
+  const input = props();
+  render(<LogicalDesignStudio {...input} />);
+  const inspector = within(screen.getByLabelText('逻辑对象属性'));
+  expect(inspector.getByText('订单')).toBeInTheDocument();
+  fireEvent.click(inspector.getByRole('button', { name: '编辑属性 order.amount' }));
+  expect(input.onEditAttribute).toHaveBeenCalledWith(11, 102);
+});
+
+it('keeps empty design and entity states actionable', () => {
+  const detail = logicalSample(); detail.entities = []; detail.relations = [];
+  const input = props({ detail });
+  const view = render(<LogicalDesignStudio {...input} />);
+  fireEvent.click(screen.getByRole('button', { name: '创建第一个实体' }));
+  expect(input.onEditEntity).toHaveBeenCalledWith();
+  const next = logicalSample(); next.model.id = 20;
+  next.entities = [next.entities[1]]; next.relations = [];
+  view.rerender(<LogicalDesignStudio {...input} detail={next} />);
+  fireEvent.click(screen.getByRole('button', { name: '添加第一个属性' }));
+  expect(input.onEditAttribute).toHaveBeenCalledWith(12);
+});
+
+it('resets navigation and selection when switching to another model', () => {
+  const input = props();
+  const view = render(<LogicalDesignStudio {...input} />);
+  fireEvent.change(screen.getByPlaceholderText('查找实体或属性'), { target: { value: 'amount' } });
+  fireEvent.click(screen.getByText('聚焦关联'));
+  const next = logicalSample(); next.model.id = 20;
+  next.entities = [next.entities[2]]; next.relations = [];
+  view.rerender(<LogicalDesignStudio {...input} detail={next} />);
+  expect(screen.getByPlaceholderText('查找实体或属性')).toHaveValue('');
+  expect(within(screen.getByLabelText('逻辑对象属性')).getByText('活动')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '显示全部' })).not.toBeInTheDocument();
 });
