@@ -3,16 +3,16 @@ import ModelingStudioHeader from './ModelingStudioHeader';
 import ModelingStartGuide from './ModelingStartGuide';
 
 const mockPush = jest.fn();
-let canReadSemantic = true;
+let mockCanReadSemantic = true;
 jest.mock('@umijs/max', () => ({ history: { push: (...args: unknown[]) => mockPush(...args) } }));
 jest.mock('@/hooks/usePermissionAccess', () => ({
   __esModule: true,
-  default: () => ({ can: (code: string) => code !== 'semantic:read' || canReadSemantic }),
+  default: () => ({ can: (code: string) => code !== 'semantic:read' || mockCanReadSemantic }),
 }));
 
 beforeEach(() => {
   mockPush.mockReset();
-  canReadSemantic = true;
+  mockCanReadSemantic = true;
 });
 
 it('renders actual modeling workspaces and links to the logical editor', () => {
@@ -25,7 +25,7 @@ it('renders actual modeling workspaces and links to the logical editor', () => {
 });
 
 it('hides Semantic entry when the user lacks Semantic read permission', () => {
-  canReadSemantic = false;
+  mockCanReadSemantic = false;
   render(<ModelingStudioHeader area="logical" title="业务逻辑设计" description="只读权限" />);
   expect(screen.queryByRole('button', { name: /业务过程/ })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: /物理建模/ })).toBeInTheDocument();

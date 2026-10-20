@@ -19,6 +19,11 @@ jest.mock('@umijs/max', () => ({
   useLocation: () => ({ pathname: '/modeling/models/701', search: mockSearch }),
 }));
 
+// The new modeling header consults the same RBAC hook as production navigation.
+jest.mock('@/hooks/usePermissionAccess', () => ({
+  __esModule: true,
+  default: () => ({ can: () => true }),
+}));
 jest.mock('@/components/ui', () => ({
   YakButton: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) =>
     <button type="button" {...props}>{children}</button>,
