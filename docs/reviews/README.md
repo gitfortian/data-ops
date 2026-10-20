@@ -24,6 +24,7 @@
 - [p1-dataset-exact-version-audit-recovery-20261008.md](./p1-dataset-exact-version-audit-recovery-20261008.md)
 - [phase1-asset-governance-review-remediation.md](./phase1-asset-governance-review-remediation.md)
 - [phase4-main-deep-review-2026-09-28.md](./phase4-main-deep-review-2026-09-28.md)
+- [pr-560-home-content-review-20261014.md](./pr-560-home-content-review-20261014.md)
 - [productization-review-v1.md](./productization-review-v1.md)
 
 
