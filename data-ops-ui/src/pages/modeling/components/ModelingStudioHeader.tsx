@@ -8,7 +8,7 @@ interface ModelingStudioHeaderProps {
   area: StudioArea;
   title: string;
   description: string;
-  eyebrow?: string;
+  eyebrow?: string | null;
   context?: ReactNode;
   actions?: ReactNode;
 }
@@ -24,7 +24,12 @@ export default function ModelingStudioHeader({
     <header className="modeling-studio-header" data-area={area}>
       <div className="modeling-studio-header-top">
         <div className="modeling-studio-heading">
-          <div className="modeling-studio-kicker"><BookOpenText size={14} aria-hidden />{eyebrow}</div>
+          {eyebrow ? (
+            <div className="modeling-studio-kicker">
+              <BookOpenText size={14} aria-hidden />
+              {eyebrow}
+            </div>
+          ) : null}
           <h1>{title}</h1>
           <p>{description}</p>
           {context ? <div className="modeling-studio-context">{context}</div> : null}

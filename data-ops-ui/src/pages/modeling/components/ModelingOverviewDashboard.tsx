@@ -120,8 +120,8 @@ export default function ModelingOverviewDashboard() {
     <div className="modeling-studio-page modeling-overview">
       <div className="modeling-studio-catalog-body">
         <ModelingStudioHeader area="catalog" title="模型总览"
+          eyebrow={null}
           description="查看当前项目的建模进展，接续未完成的设计。模型查询、筛选和创建请进入物理模型。"
-          context={<span>当前项目 #{projectId ?? '未选定'}</span>}
           actions={<Button icon={<RefreshCw size={14} />} onClick={() => void refresh()} loading={loading}>刷新概况</Button>} />
         {projectId == null ? (
           <Alert showIcon type="info" message="请先选择项目" description="选择项目后查看该项目的模型建设情况。" />
