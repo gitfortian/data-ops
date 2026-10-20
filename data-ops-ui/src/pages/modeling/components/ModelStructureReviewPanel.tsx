@@ -1,4 +1,4 @@
-import { Alert, Button, Collapse, Select, Space, Table, Typography } from 'antd';
+import { Alert, Button, Collapse, Select, Table } from 'antd';
 import { useEffect, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { useLatestOperation } from '@/hooks/useLatestOperation';
@@ -6,6 +6,7 @@ import { usePermissionAccess } from '@/hooks/usePermissionAccess';
 import { governanceEntryPath } from '@/services/agent/governance';
 import { listModelingVersions } from '@/services/modeling/api';
 import { matchesStructureReview, prepareModelStructureReview, type ModelStructureReviewContext } from '@/services/modeling/structureReview';
+import './ModelVersionPanel.less';
 
 const REASONS: Record<string, string> = {
   ORPHAN_MAPPING_TARGET: '映射目标已不在保存结构中', UNMAPPED_SAVED_COLUMN: '当前保存字段未映射',
@@ -80,29 +81,33 @@ export default function ModelStructureReviewPanel({ modelId, search }: { modelId
   if (!allowed || !projectId) return null;
   const requested = new URLSearchParams(search).has('reviewVersion');
   const hasWork = ready && (ready.changes.length > 0 || ready.mappingChecks.length > 0);
-  return <section aria-label="模型结构变更核对" className="space-y-3 rounded-lg border border-[#e7e9ec] p-4">
-    <Typography.Title level={5}>模型结构变更与映射检查</Typography.Title>
-    <Typography.Paragraph type="secondary">选择发布基准，与已保存结构比较；未保存编辑不包含。映射仅为当前状态，没有历史映射快照。</Typography.Paragraph>
+  return <section aria-label="模型结构变更核对" className="model-version-review">
+    <div className="model-version-review-header">
+      <div><h3>结构比较</h3><p>发布基准与已保存结构</p></div>
+      <div className="model-version-review-controls">
+        <Select aria-label="结构比较基准版本" className="model-version-review-select"
+          placeholder="选择发布基准版本" value={selected ? versionNo : undefined}
+          options={visibleVersions.map((value) => ({ value, label: `发布版本 V${value}` }))}
+          onChange={(value: number) => { setSelection({ resource, version: value }); setPrepared(undefined); setError(undefined); }} />
+        <Button disabled={!selected || busy === scope} loading={busy === scope} onClick={() => void prepare()}>准备结构比较</Button>
+      </div>
+    </div>
+    <p className="model-version-review-note">比较仅包含已保存结构，当前映射没有历史映射快照。</p>
     {requested && !selected && selection?.resource !== resource && <Alert type="warning" showIcon message="指定基准版本尚未确认或已失效，请重新选择；不会替换为当前版本。" />}
-    <Space wrap>
-      <Select aria-label="结构比较基准版本" style={{ width: 220 }} placeholder="选择发布基准版本" value={selected ? versionNo : undefined}
-        options={visibleVersions.map((value) => ({ value, label: `发布版本 V${value}` }))}
-        onChange={(value: number) => { setSelection({ resource, version: value }); setPrepared(undefined); setError(undefined); }} />
-      <Button disabled={!selected || busy === scope} loading={busy === scope} onClick={() => void prepare()}>准备结构比较</Button>
-    </Space>
     {error?.scope === scope && <Alert type="warning" showIcon message={error.text} />}
     {ready && <>
-      <Typography.Paragraph>基准 V{ready.baselineVersionNo}（{ready.baselineColumnCount} 字段）→ 已保存结构（{ready.savedColumnCount} 字段）；结构差异 {ready.changes.length} 项，当前映射待检查 {ready.mappingChecks.length} 项。</Typography.Paragraph>
-      <Alert type="info" showIcon message="未检查源字段存在性或类型兼容；未比较默认值、表达式、表属性、描述、标准语义及模型关系。清单不代表完整影响或允许发布。" />
-      <Collapse items={[{ key: 'changes', label: '查看结构差异', children: <Table rowKey={(_, index) => String(index)} pagination={false} size="small" dataSource={ready.changes}
-        columns={[{ title: '范围', dataIndex: 'area', render: (area: string) => AREAS[area] }, { title: '对象', dataIndex: 'name' }, { title: '基准', dataIndex: 'before', render: (value: string | null, item) => describeChange(item.area, value) }, { title: '已保存', dataIndex: 'after', render: (value: string | null, item) => describeChange(item.area, value) }]} /> },
-      { key: 'mappings', label: '查看当前映射检查清单', children: <Table rowKey="targetColumn" pagination={false} size="small" dataSource={ready.mappingChecks}
-        columns={[{ title: '目标字段', dataIndex: 'targetColumn' }, { title: '待检查项', dataIndex: 'reasons', render: (values: string[]) => values.map((value) => REASONS[value]).join('；') }]} /> }]} />
-      <Space wrap>
-        {hasWork ? <Button href={governanceEntryPath({ purpose: 'MODEL_STRUCTURE_REVIEW', modelStructureReview: { modelId, baselineVersionNo: ready.baselineVersionNo, definition: ready.definition } })}>AI 结构变更说明</Button>
-          : <Typography.Text type="secondary">白名单内未发现结构差异或映射待检查项；仍需人工核对未覆盖范围。</Typography.Text>}
-        <Button href={`/modeling/models/${modelId}/mapping`}>打开来源映射核对</Button>
-      </Space>
+      <div className="model-version-review-result">
+        <span>V{ready.baselineVersionNo}<small>{ready.baselineColumnCount} 字段 → 已保存 {ready.savedColumnCount} 字段</small></span>
+        <span>结构差异 <b>{ready.changes.length}</b></span><span>映射待检查 <b>{ready.mappingChecks.length}</b></span>
+      </div>
+      {hasWork ? <Collapse ghost className="model-version-review-details" items={[
+        ...(ready.changes.length ? [{ key: 'changes', label: `查看结构差异（${ready.changes.length}）`, children: <Table rowKey={(_, index) => String(index)} pagination={false} size="small" scroll={{ x: 580, y: 280 }} dataSource={ready.changes}
+          columns={[{ title: '范围', dataIndex: 'area', width: 75, render: (area: string) => AREAS[area] }, { title: '对象', dataIndex: 'name', width: 140 }, { title: '基准', dataIndex: 'before', render: (value: string | null, item) => describeChange(item.area, value) }, { title: '已保存', dataIndex: 'after', render: (value: string | null, item) => describeChange(item.area, value) }]} /> }] : []),
+        ...(ready.mappingChecks.length ? [{ key: 'mappings', label: `查看当前映射检查清单（${ready.mappingChecks.length}）`, children: <Table rowKey="targetColumn" pagination={false} size="small" scroll={{ x: 420, y: 280 }} dataSource={ready.mappingChecks}
+          columns={[{ title: '目标字段', dataIndex: 'targetColumn', width: 160 }, { title: '待检查项', dataIndex: 'reasons', render: (values: string[]) => values.map((value) => REASONS[value]).join('；') }]} /> }] : []),
+      ]} /> : <p className="model-version-review-note">白名单内未发现结构差异或映射待检查项；仍需人工核对未覆盖范围。</p>}
+      <p className="model-version-review-limit">未核验源字段存在性或类型兼容；默认值、表达式、表属性、描述、标准语义及模型关系不在比较范围。清单不代表完整影响或允许发布。</p>
+      {hasWork ? <Button size="small" className="model-version-review-ai" href={governanceEntryPath({ purpose: 'MODEL_STRUCTURE_REVIEW', modelStructureReview: { modelId, baselineVersionNo: ready.baselineVersionNo, definition: ready.definition } })}>AI 结构变更说明</Button> : null}
     </>}
   </section>;
 }

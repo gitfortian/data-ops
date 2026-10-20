@@ -7,7 +7,7 @@ type StudioArea = 'catalog' | 'logical' | 'physical';
 interface ModelingStudioHeaderProps {
   area: StudioArea;
   title: string;
-  description: string;
+  description?: string;
   eyebrow?: string | null;
   context?: ReactNode;
   actions?: ReactNode;
@@ -31,7 +31,7 @@ export default function ModelingStudioHeader({
             </div>
           ) : null}
           <h1>{title}</h1>
-          <p>{description}</p>
+          {description ? <p>{description}</p> : null}
           {context ? <div className="modeling-studio-context">{context}</div> : null}
         </div>
         {actions ? <div className="modeling-studio-header-actions">{actions}</div> : null}

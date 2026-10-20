@@ -198,7 +198,10 @@ public class OdsSourceMappingReconcileService {
     for (ColumnDefinition column : columns) {
       String name = column.columnName();
       ModelingColumnMappingPO existingMapping = saved.get(key(name));
-      if (existingMapping != null && !sameBinding(model, existingMapping)) {
+      if (MappingService.isExpressionOnly(existingMapping)) {
+        mapped++;
+        rows.add(new MappingRow(name, column.dataType(), "EXPRESSION", null, null));
+      } else if (existingMapping != null && !sameBinding(model, existingMapping)) {
         conflicts++;
         rows.add(new MappingRow(name, column.dataType(), "SOURCE_CONFLICT",
             existingMapping.getSourceDatasourceId() + ":"

@@ -295,10 +295,10 @@ export interface ModelingMappingView {
 }
 
 export interface ModelingMappingSavePayload {
-  sourceDatasourceId: number;
-  sourceDatabase: string;
-  sourceTable: string;
-  sourceColumn: string;
+  sourceDatasourceId?: number | null;
+  sourceDatabase?: string | null;
+  sourceTable?: string | null;
+  sourceColumn?: string | null;
   transformExpr?: string;
 }
 

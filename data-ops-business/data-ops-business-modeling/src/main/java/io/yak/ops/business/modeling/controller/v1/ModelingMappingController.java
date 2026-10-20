@@ -13,8 +13,6 @@ import io.yak.ops.core.project.ProjectMigrationMode;
 import io.yak.ops.core.project.ProjectScope;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import lombok.Data;
@@ -69,21 +67,17 @@ public class ModelingMappingController {
         modelId, request, currentUserProvider.getCurrentUser(httpRequest)));
   }
 
-  /** 映射设置请求。 */
+  /** 来源字段按映射内容在 MappingService 中条件校验，纯表达式允许不提供来源。 */
   @Data
   public static class MappingSetRequest {
-    @NotNull(message = "源数据源不能为空")
     Long sourceDatasourceId;
 
-    @NotBlank(message = "源库不能为空")
     @Size(max = 128, message = "源库不能超过 128 个字符")
     String sourceDatabase;
 
-    @NotBlank(message = "源表不能为空")
     @Size(max = 128, message = "源表不能超过 128 个字符")
     String sourceTable;
 
-    @NotBlank(message = "源字段不能为空")
     @Size(max = 128, message = "源字段不能超过 128 个字符")
     String sourceColumn;
 

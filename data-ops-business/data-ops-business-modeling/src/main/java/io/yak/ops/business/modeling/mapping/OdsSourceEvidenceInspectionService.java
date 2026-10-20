@@ -128,6 +128,11 @@ public class OdsSourceEvidenceInspectionService {
         }
         continue;
       }
+      if (MappingService.isExpressionOnly(mapping)) {
+        fields.add(new FieldEvidence(physicalName, target.dataType(), null, null,
+            "EXPRESSION", "表达式映射，不依赖源字段"));
+        continue;
+      }
       String sourceName = mapping.getSourceColumn();
       if (!Objects.equals(model.sourceDatasourceId(), mapping.getSourceDatasourceId())
           || !Objects.equals(model.sourceDatabase(), mapping.getSourceDatabase())

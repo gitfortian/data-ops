@@ -52,7 +52,7 @@ export interface OdsMappingReconcilePreview {
   rows: {
     targetColumn: string;
     dataType: string;
-    status: 'MAPPED' | 'UNMAPPED' | 'TECHNICAL' | 'SOURCE_CONFLICT';
+    status: 'MAPPED' | 'UNMAPPED' | 'TECHNICAL' | 'SOURCE_CONFLICT' | 'EXPRESSION';
     existingSourceColumn?: string | null;
     suggestedSourceColumn?: string | null;
   }[];

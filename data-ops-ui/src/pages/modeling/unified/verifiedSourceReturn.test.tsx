@@ -12,6 +12,11 @@ const mockGetModel = jest.fn();
 let mockSearch = '?origin=live-source&datasourceId=18&database=trade_db&schema=public&table=trade_order';
 let mockEditorValue = '';
 
+jest.mock('@/contexts/SecurityProjectContext', () => ({
+  useSecurityProject: () => ({ currentProject: { id: 1 } }),
+}));
+jest.mock('@/pages/modeling/components/ModelPhysicalTablePanel', () => () => null);
+
 jest.mock('@umijs/max', () => ({
   history: { push: (...args: unknown[]) => mockPush(...args),
     replace: (...args: unknown[]) => mockReplace(...args) },
@@ -50,7 +55,6 @@ jest.mock('@/pages/modeling/detail', () => {
 jest.mock('@/pages/modeling/components/ModelLineagePanel', () => () => null);
 jest.mock('@/pages/modeling/components/ModelVersionPanel', () => () => null);
 jest.mock('@/pages/data-lifecycle/components/ModelLifecycleTab', () => () => null);
-jest.mock('@/pages/modeling/layer-mapping', () => () => null);
 jest.mock('@/pages/modeling/mapping', () => () => null);
 jest.mock('@/services/modeling/api', () => ({
   getModelingModel: (...args: unknown[]) => mockGetModel(...args),
@@ -130,6 +134,7 @@ it('does not offer a return action when persisted ODS source differs from URL', 
 });
 
 it('does not silently discard the structure editor when switching to logical evidence', async () => {
+  mockGetModel.mockResolvedValue({ ...model, layerCode: 'DWD' });
   jest.spyOn(Modal, 'confirm').mockImplementation((options) => {
     pendingConfirm = options;
     return { destroy: jest.fn(), update: jest.fn() };
@@ -138,7 +143,7 @@ it('does not silently discard the structure editor when switching to logical evi
   fireEvent.change(await screen.findByLabelText('结构草稿'), {
     target: { value: 'unsaved-business-key' },
   });
-  fireEvent.click(screen.getByText('业务逻辑依据'));
+  fireEvent.click(await screen.findByText('业务逻辑依据'));
   expect(pendingConfirm?.okText).toBe('放弃修改并继续');
   expect(pendingConfirm?.cancelText).toBe('继续编辑');
   expect(mockReplace).not.toHaveBeenCalled();
@@ -150,3 +155,32 @@ it('does not silently discard the structure editor when switching to logical evi
   const destination = mockReplace.mock.calls[0][0] as { search: string };
   expect(new URLSearchParams(destination.search).get('tab')).toBe('logical');
 });
+
+it('keeps the current dirty editor when its navigation entry is selected again', async () => {
+  const confirm = jest.spyOn(Modal, 'confirm');
+  render(<UnifiedModelView />);
+  fireEvent.change(await screen.findByLabelText('结构草稿'), {
+    target: { value: 'unsaved-field' },
+  });
+  fireEvent.click(screen.getByText('模型设计'));
+  expect(confirm).not.toHaveBeenCalled();
+  expect(mockReplace).not.toHaveBeenCalled();
+  expect(screen.getByLabelText('结构草稿')).toHaveValue('unsaved-field');
+});
+
+it.each([['基本信息', 'overview'], ['版本管理', 'version']])(
+  'opens %s from the grouped navigation while preserving source return coordinates', async (label, tab) => {
+    render(<UnifiedModelView />);
+    await screen.findByText('Order ODS');
+    fireEvent.click(screen.getByText(label));
+    expect(mockReplace).toHaveBeenCalledTimes(1);
+    const destination = mockReplace.mock.calls[0][0] as { pathname: string; search: string };
+    expect(destination.pathname).toBe('/modeling/models/701');
+    const query = new URLSearchParams(destination.search);
+    expect(query.get('tab')).toBe(tab);
+    expect(query.get('origin')).toBe('live-source');
+    expect(query.get('datasourceId')).toBe('18');
+    expect(query.get('schema')).toBe('public');
+    expect(query.get('table')).toBe('trade_order');
+  },
+);

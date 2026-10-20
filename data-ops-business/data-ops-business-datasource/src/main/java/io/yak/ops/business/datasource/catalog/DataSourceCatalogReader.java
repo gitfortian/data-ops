@@ -10,8 +10,11 @@ import io.yak.ops.business.datasource.domain.catalog.CatalogTable;
 import io.yak.ops.business.datasource.domain.catalog.CatalogTablePath;
 import io.yak.ops.business.datasource.domain.catalog.CatalogTableQuery;
 import io.yak.ops.business.datasource.gateway.DataSourceCatalogGateway;
+import io.yak.ops.business.datasource.exception.DataSourceException;
+import io.yak.ops.common.enums.datasource.DataSourceErrorCode;
 import io.yak.ops.business.datasource.query.DataSourceReader;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -96,6 +99,27 @@ public class DataSourceCatalogReader {
   }
 
   /** Bypasses discovery cache for adoption/save validation after external DDL. */
+  public Optional<CatalogTable> findTableFresh(Long dataSourceId, String database, String schema, String table) {
+    DataSourceDefinition definition = dataSourceReader.require(dataSourceId);
+    if (table == null || table.isBlank()) {
+      throw new DataSourceException(DataSourceErrorCode.CATALOG_FAILED, "缺少精确表名");
+    }
+    var candidates = catalogGateway.listTables(definition,
+        new CatalogTableQuery(database, schema, table, MAX_TABLE_SEARCH_LIMIT), connectionTimeoutSeconds());
+    if (candidates == null || candidates.size() >= MAX_TABLE_SEARCH_LIMIT
+        || candidates.stream().anyMatch(java.util.Objects::isNull)) {
+      throw new DataSourceException(DataSourceErrorCode.CATALOG_FAILED, "目录查询不完整，请指定更精确的库和 Schema");
+    }
+    var exact = candidates.stream().filter(candidate -> candidate != null && table.equals(candidate.name())
+        && (candidate.database() == null || database == null || database.equals(candidate.database()))
+        && (schema == null || schema.isBlank() || schema.equals(candidate.schema()))).toList();
+    if (exact.size() > 1) {
+      throw new DataSourceException(DataSourceErrorCode.CATALOG_FAILED, "存在多个同名表，请明确目标 Schema");
+    }
+    return exact.stream().findFirst();
+  }
+
+  /** Bypasses column cache after external DDL. */
   public List<CatalogColumn> listColumnsFresh(Long dataSourceId, String database, String schema, String table) {
     var definition = dataSourceReader.require(dataSourceId);
     return catalogGateway.listColumns(definition, new CatalogTablePath(database, schema, table),

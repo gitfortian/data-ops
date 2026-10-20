@@ -1,6 +1,7 @@
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import { useLatestOperation, useResourceScope } from '@/hooks/useLatestOperation';
 import { useModelStructureDraft } from './editor/useModelStructureDraft';
+import { compareOdsSourceColumns } from './editor/odsSourceDifference';
 import { type ColumnDraft, CODE_PATTERN, MODEL_PUBLISH_FLOW_CODE, MODEL_PUBLISH_BIZ_TYPE, PUBLISH_APPROVAL_POLL_MS, TYPE_DEFAULTS, typeSpecOf, resolveColumnType, PARTITION_TYPES_BY_DIALECT, AGGREGATE_FUNC_OPTIONS, AGGREGATE_LAYERS } from './editor/structureRules';
 import { history, useParams, useSearchParams } from '@umijs/max';
 import { ApartmentOutlined, CloudDownloadOutlined, CopyOutlined, ExclamationCircleOutlined, FundOutlined, ReloadOutlined, ThunderboltOutlined } from '@ant-design/icons';
@@ -34,9 +35,7 @@ import { ApprovalStatusTag } from '@/components/ApprovalStatusTag';
 import { findByBiz, listFlows } from '@/services/approval/api';
 import type { ApprovalInstance } from '@/services/approval/types';
 import BatchStandardAssistant from './components/BatchStandardAssistant';
-import OdsPublishedVersionEvidencePanel from './components/OdsPublishedVersionEvidencePanel';
 import DwdPublishedMappingHistoryPanel from './components/DwdPublishedMappingHistoryPanel';
-import OdsPhysicalDeliveryPanel from './components/OdsPhysicalDeliveryPanel';
 import PhysicalStandardCoveragePanel from './components/PhysicalStandardCoveragePanel';
 import { locatePhysicalCoverageColumn } from './governanceRepairLocator';
 import { physicalGovernanceBaseline, type PhysicalGovernanceBaseline } from './governanceRecheck';
@@ -64,9 +63,9 @@ import {
   submitModelingPublishApproval,
   validateModelingStructure,
 } from '@/services/modeling/api';
-import JsonDiffView from '@/components/version/JsonDiffView';
+import ModelPublishSummary from './components/ModelPublishSummary';
 import { previewModelingImportColumns } from '@/services/modeling/import';
-import type { ModelingModelRecord, ModelingSaveStructurePayload, ModelingStructureRecord, ModelingTypeOption, ModelingValidationIssue } from '@/services/modeling/types';
+import type { ModelingImportColumnView, ModelingModelRecord, ModelingStructureRecord, ModelingTypeOption, ModelingValidationIssue } from '@/services/modeling/types';
 import type { ModelPublicationReadiness } from '@/services/modeling/api';
 import { getStandardOptions, pageSemanticFields, pageSemanticProcesses } from '@/services/semantic/api';
 import type { SemanticFieldRecord, SemanticProcessRecord } from '@/services/semantic/types';
@@ -168,6 +167,9 @@ const emptyColumnDraft = (): ColumnDraft => ({
     : undefined;
   const [structure, setStructure] = useState<ModelingStructureRecord>();
   const [modelInfo, setModelInfo] = useState<ModelingModelRecord | null>(null);
+  const isOdsModel = modelInfo?.layerCode?.toUpperCase() === 'ODS';
+  const showStandardControls = modelInfo?.id != null && String(modelInfo.id) === modelId
+    && Boolean(modelInfo.layerCode) && !isOdsModel;
   const [foundationOpen, setFoundationOpen] = useState(true);
   useEffect(() => {
     setFoundationOpen(!['DWS', 'ADS'].includes((modelInfo?.layerCode || '').toUpperCase()));
@@ -183,17 +185,15 @@ const emptyColumnDraft = (): ColumnDraft => ({
     onEditorStateChange?.({ dirty: false, saving: false, loading: false });
   }, [onEditorStateChange]);
   const [publishing, setPublishing] = useState(false);
-  const [odsVersionEvidenceOpen, setOdsVersionEvidenceOpen] = useState(false);
   const [dwdHistoryOpen, setDwdHistoryOpen] = useState(false);
-  const [odsPhysicalDeliveryOpen, setOdsPhysicalDeliveryOpen] = useState(false);
   const [standardCoverageOpen, setStandardCoverageOpen] = useState(false);
   const [coverageFeedback, setCoverageFeedback] = useState<{
     projectId?: number | string; baseline: PhysicalGovernanceBaseline;
   }>();
   const [dataDevHandoffOpen, setDataDevHandoffOpen] = useState(false);
   const [publishPreview, setPublishPreview] = useState<{
-    before: unknown;
-    after: unknown;
+    before: ModelingStructureRecord | null;
+    after: ModelingStructureRecord;
     publishedVersionNo: number | null;
     /** Live server evidence; not a grant to bypass the publication fence. */
     readiness: ModelPublicationReadiness | null;
@@ -231,14 +231,36 @@ const emptyColumnDraft = (): ColumnDraft => ({
   // 逆向导入配置(从 URL 读取后持久化,支持重新导入恢复源表字段)
   const [importConfig, setImportConfig] = useState<{ datasourceId: number; database: string; table: string } | null>(null);
   const [reimportLoading, setReimportLoading] = useState(false);
-  const [odsCommitReview, setOdsCommitReview] = useState<{
-    structure: ModelingSaveStructurePayload;
-    definition: string;
-    source: { datasourceId: number; database: string; table: string };
-    sourceColumns: string[];
-    mappings: Record<string, string>;
-  } | null>(null);
-  const odsCommitDraftGuard = useRef<(() => boolean) | null>(null);
+  const odsSource = useMemo<{
+    datasourceId: number; database: string; schema?: string; table: string;
+  } | null>(() => {
+    if (!isOdsModel) return null;
+    if (modelInfo?.sourceDatasourceId && modelInfo.sourceTable) return {
+      datasourceId: modelInfo.sourceDatasourceId, database: modelInfo.sourceDatabase || '',
+      schema: modelInfo.sourceSchema || undefined, table: modelInfo.sourceTable,
+    };
+    return importConfig;
+  }, [isOdsModel, modelInfo?.sourceDatasourceId, modelInfo?.sourceDatabase,
+    modelInfo?.sourceSchema, modelInfo?.sourceTable, importConfig]);
+  const odsSourceKey = JSON.stringify([currentProject?.id, modelId, odsSource]);
+  const [odsSourceSnapshot, setOdsSourceSnapshot] = useState<{
+    key: string; columns: ModelingImportColumnView[]; failed?: boolean;
+  }>();
+  useEffect(() => {
+    setOdsSourceSnapshot(undefined);
+    if (!odsSource) return;
+    const current = captureEditorResource();
+    let live = true;
+    void previewModelingImportColumns(odsSource.datasourceId, odsSource.database, odsSource.table,
+      odsSource.schema).then((columns) => {
+      if (live && current()) setOdsSourceSnapshot({
+        key: odsSourceKey, columns, failed: !columns.some(column => !column.technical),
+      });
+    }).catch(() => {
+      if (live && current()) setOdsSourceSnapshot({ key: odsSourceKey, columns: [], failed: true });
+    });
+    return () => { live = false; };
+  }, [odsSource, odsSourceKey, captureEditorResource]);
   const [discoverLoading, setDiscoverLoading] = useState(false);
   // 导入字段弹窗状态(用于空模型导入)
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -282,7 +304,12 @@ const emptyColumnDraft = (): ColumnDraft => ({
   const discoverStandards = useCallback(
     async (
       targetRows: ColumnDraft[],
+      layerCode: string | undefined,
     ): Promise<{ rows: ColumnDraft[]; matchCount: number }> => {
+      // Use the loaded model's layer: setModelInfo has not committed during initial imports.
+      if (!layerCode || layerCode.toUpperCase() === 'ODS') {
+        return { rows: targetRows, matchCount: 0 };
+      }
       const isCurrent = captureEditorResource();
       // 分页加载全部标准字段(后端限制 pageSize <= 200)
       const allFields: SemanticFieldRecord[] = [];
@@ -440,7 +467,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
               if (tableRemarks) setTableComment(tableRemarks);
               // 自动触发标准发现
               try {
-                const discovered = await discoverStandards(initialRows);
+                const discovered = await discoverStandards(initialRows, modelData?.layerCode);
                 if (!isCurrent()) return;
                 setRows(discovered.rows);
                 if (discovered.matchCount > 0) {
@@ -496,7 +523,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
               const tableRemarks = columns[0]?.tableRemarks;
               if (tableRemarks) setTableComment(tableRemarks);
               try {
-                const discovered = await discoverStandards(initialRows);
+                const discovered = await discoverStandards(initialRows, modelData.layerCode);
                 if (!isCurrent()) return;
                 setRows(discovered.rows);
                 if (discovered.matchCount > 0) {
@@ -515,7 +542,8 @@ const emptyColumnDraft = (): ColumnDraft => ({
         }
       }
       // 如果已有字段但未走过标准发现流程,自动触发一次
-      if (!autoDiscoverTriggered && data.columns?.length) {
+      if (modelData?.layerCode && modelData.layerCode.toUpperCase() !== 'ODS'
+          && !autoDiscoverTriggered && data.columns?.length) {
         const hasStdBinding = data.columns.some((c) => c.stdFieldId != null);
         if (!hasStdBinding) {
           try {
@@ -537,7 +565,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
               stdSecurityId: column.stdSecurityId ?? null,
               stdFieldId: column.stdFieldId ?? null,
             }));
-            const discovered = await discoverStandards(currentRows);
+            const discovered = await discoverStandards(currentRows, modelData.layerCode);
             if (discovered.matchCount > 0) {
               if (!isCurrent()) return;
               setRows(discovered.rows);
@@ -629,7 +657,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
   /** 标准发现:按字段名匹配标准字段集,匹配到的自动回填标准绑定。 */
   const handleStandardDiscover = useCallback(async () => {
     const isCurrent = captureEditorResource();
-    if (!isCurrent()) return;
+    if (!isCurrent() || !showStandardControls) return;
     if (!rows.length) {
       message.warning('当前无字段可匹配');
       return;
@@ -637,7 +665,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
     const draftUnchanged = captureDraft();
     setDiscoverLoading(true);
     try {
-      const result = await discoverStandards(rows);
+      const result = await discoverStandards(rows, modelInfo?.layerCode);
       if (!isCurrent()) return;
       if (!draftUnchanged()) {
         message.info('草稿已修改，请重新执行标准发现');
@@ -663,7 +691,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
       if (!isCurrent()) return;
       setDiscoverLoading(false);
     }
-  }, [rows, discoverStandards, captureEditorResource, captureDraft]);
+  }, [rows, modelInfo?.layerCode, showStandardControls, discoverStandards, captureEditorResource, captureDraft]);
 
   /** 从 jdbcUrl 解析数据库名。 */
   const extractDatabaseFromUrl = useCallback((url?: string): string => {
@@ -729,7 +757,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
     [datasources, extractDatabaseFromUrl, captureEditorResource, beginImportTableLoad],
   );
 
-  /** 确认导入:从源表加载字段并自动标准发现。 */
+  /** 确认导入:从源表加载字段,非 ODS 分层自动发现标准。 */
   const handleImportConfirm = useCallback(async () => {
     const isCurrent = captureEditorResource();
     if (!isCurrent()) return;
@@ -763,18 +791,18 @@ const emptyColumnDraft = (): ColumnDraft => ({
         if (tableRemarks) setTableComment(tableRemarks);
         // 自动标准发现
         try {
-          const discovered = await discoverStandards(initialRows);
+          const discovered = await discoverStandards(initialRows, modelInfo?.layerCode);
           if (!isCurrent()) return;
           setRows(discovered.rows);
           if (discovered.matchCount > 0) {
-            message.success(`已加载来源字段草稿，标准发现匹配 ${discovered.matchCount} 项；仍需确认保存来源映射`);
+            message.success(`已导入 ${columns.length} 个字段，匹配 ${discovered.matchCount} 项标准`);
           } else {
-            message.success(`已加载 ${columns.length} 个来源字段草稿；尚未保存正式映射`);
+            message.success(`已导入 ${columns.length} 个字段，请保存表结构`);
           }
         } catch {
           if (!isCurrent()) return;
           setRows(initialRows);
-          message.success(`已加载 ${columns.length} 个来源字段草稿；尚未保存正式映射`);
+          message.success(`已导入 ${columns.length} 个字段，请保存表结构`);
         }
         // 保存导入配置以支持重新导入
         setImportConfig({ datasourceId: importDatasourceId, database: importDatabase, table: importTable });
@@ -793,7 +821,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
       if (!isCurrent()) return;
       setImportModalLoading(false);
     }
-  }, [importDatasourceId, importTable, importDatabase, discoverStandards, captureEditorResource]);
+  }, [importDatasourceId, importTable, importDatabase, modelInfo?.layerCode, discoverStandards, captureEditorResource]);
 
   /** 打开从模型导入字段弹窗。 */
   const handleOpenImportFromModel = useCallback(async () => {
@@ -875,7 +903,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
       // 自动标准发现
       let finalRows = newRows;
       try {
-        const discovered = await discoverStandards(newRows);
+        const discovered = await discoverStandards(newRows, modelInfo?.layerCode);
         if (!isCurrent()) return;
         finalRows = discovered.rows;
         if (discovered.matchCount > 0) {
@@ -904,7 +932,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
       if (!isCurrent()) return;
       setImportFromModelLoading(false);
     }
-  }, [selectedModelIds, rows, primaryKey, discoverStandards, captureEditorResource]);
+  }, [selectedModelIds, rows, primaryKey, modelInfo?.layerCode, discoverStandards, captureEditorResource]);
 
   /** 打开从业务过程导入字段弹窗。 */
   const handleOpenImportFromProcess = useCallback(async () => {
@@ -992,7 +1020,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
       // 自动标准发现
       let finalProcessRows = newRows;
       try {
-        const discovered = await discoverStandards(newRows);
+        const discovered = await discoverStandards(newRows, modelInfo?.layerCode);
         if (!isCurrent()) return;
         finalProcessRows = discovered.rows;
         if (discovered.matchCount > 0) {
@@ -1328,7 +1356,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
   // C2(2026-09-17):"数据标准"列把类型标准 ID 解析为"名称（编码）";失败降级为空
   useEffect(() => {
     const isCurrent = captureEditorResource();
-    if (!modelId) {
+    if (!modelId || !showStandardControls) {
       return;
     }
     getStandardOptions(['TYPE', 'UNIT', 'CALIBER', 'SECURITY'])
@@ -1343,7 +1371,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
         setStandardNameById(nameById);
       })
       .catch(() => undefined);
-  }, [modelId, captureEditorResource]);
+  }, [modelId, showStandardControls, captureEditorResource]);
 
   const updateRow = (key: number, patch: Partial<ColumnDraft>) => {
     markDirty();
@@ -1352,6 +1380,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
 
   /** 字段名下拉检索:按关键字远端查标准字段集,空关键字不展示候选,自定义填写不受影响。 */
   const searchStandardFields = (keyword: string) => {
+    if (!showStandardControls) return;
     const isCurrent = beginStandardSearch();
     const text = keyword.trim();
     clearTimeout(standardFieldSearchTimerRef.current);
@@ -1571,7 +1600,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
   const handleSave = async () => {
     const isCurrent = captureEditorResource();
     if (!isCurrent()) return;
-    if (!modelId) return;
+    if (!modelId || saving) return;
     const seen = new Set<string>();
     for (const row of rows) {
       const name = row.columnName.trim();
@@ -1706,30 +1735,32 @@ const emptyColumnDraft = (): ColumnDraft => ({
       }
       // First ODS import must persist the physical structure and real source
       // mappings in one domain transaction, never as separate browser writes.
-      if (importConfig && modelInfo?.layerCode?.toUpperCase() === 'ODS'
+      if (odsSource && modelInfo?.layerCode?.toUpperCase() === 'ODS'
           && modelInfo.status === 'DRAFT' && !structure?.columns?.length) {
         if (!structure?.definition) {
           message.error('缺少草稿编辑基线，请刷新后重新核对');
           return;
         }
         const sourceColumns = await previewModelingImportColumns(
-          importConfig.datasourceId, importConfig.database, importConfig.table);
+          odsSource.datasourceId, odsSource.database, odsSource.table, odsSource.schema);
         if (!isCurrent() || !draftUnchanged()) return;
         const names = sourceColumns.filter((col) => !col.technical).map((col) => col.name);
         if (!names.length || new Set(names.map((name) => name.toLowerCase())).size !== names.length) {
           message.error('真实源字段为空或存在重复，请核查授权元数据');
           return;
         }
-        const mapping: Record<string, string> = {};
-        names.forEach((source) => {
+        const selections = names.flatMap((source) => {
           const target = payload.columns.find((col) => col.columnName.toLowerCase() === source.toLowerCase());
-          if (target) mapping[target.columnName] = source;
+          return target ? [{ targetColumn: target.columnName, sourceColumn: source }] : [];
         });
-        odsCommitDraftGuard.current = draftUnchanged;
-        setOdsCommitReview({
-          structure: payload, definition: structure.definition, source: importConfig,
-          sourceColumns: names, mappings: mapping,
-        });
+        setOdsSourceSnapshot({ key: odsSourceKey, columns: sourceColumns });
+        await saveOdsFirstImport({
+          expectedDefinition: structure.definition,
+          sourceDatasourceId: odsSource.datasourceId,
+          sourceDatabase: odsSource.database, sourceTable: odsSource.table,
+          sourceSchema: odsSource.schema,
+          structure: payload, selections,
+        }, names.length, draftUnchanged);
         return;
       }
       const saved = await saveModelingStructure(modelId, payload, structure?.definition);
@@ -1752,49 +1783,39 @@ const emptyColumnDraft = (): ColumnDraft => ({
     }
   };
 
-  /** One explicit confirm command. Success comes from the same-transaction readback receipt. */
-  const confirmOdsFirstImport = async () => {
-    const review = odsCommitReview;
-    if (!review || !modelId || saving) return;
+  /** Differences do not block saving; only known mappings are persisted. */
+  const saveOdsFirstImport = async (
+    submission: Parameters<typeof commitOdsManualImport>[1], sourceColumnCount: number,
+    draftUnchanged: () => boolean,
+  ) => {
+    if (!modelId) return;
     const current = captureEditorResource();
-    if (!current() || !odsCommitDraftGuard.current?.()) {
+    if (!current() || !draftUnchanged()) {
       message.warning('草稿内容或项目已变化，请重新核对来源后保存');
-      setOdsCommitReview(null);
-      return;
-    }
-    const selections = Object.entries(review.mappings)
-      .filter(([, sourceColumn]) => Boolean(sourceColumn))
-      .map(([targetColumn, sourceColumn]) => ({ targetColumn, sourceColumn }));
-    if (selections.length !== review.sourceColumns.length
-        || new Set(selections.map((selection) => selection.sourceColumn.toLowerCase())).size
-          !== review.sourceColumns.length) {
-      message.warning('全部真实源列须逐一对应不同的 ODS 物理目标列；技术列无需来源映射');
       return;
     }
     setSaving(true);
     try {
-      const receipt = await commitOdsManualImport(modelId, {
-        expectedDefinition: review.definition,
-        sourceDatasourceId: review.source.datasourceId,
-        sourceDatabase: review.source.database,
-        sourceTable: review.source.table,
-        structure: review.structure,
-        selections,
-      });
+      const receipt = await commitOdsManualImport(modelId, submission);
       if (!current()) return;
       if (receipt.status !== 'SAVED_AND_VERIFIED'
-          || receipt.confirmedMappingCount !== selections.length
-          || receipt.sourceColumnCount !== review.sourceColumns.length) {
+          || receipt.confirmedMappingCount !== submission.selections.length
+          || receipt.sourceColumnCount !== sourceColumnCount) {
         throw new Error('来源映射保存回执不完整，不能认定导入成功');
       }
-      setOdsCommitReview(null);
-      message.success(`已原子保存 ODS 结构及 ${receipt.confirmedMappingCount} 条真实源列映射，回读验证通过`);
+      setStructure((previous) => previous ? {
+        ...previous, ...submission.structure, definition: receipt.newStructureDefinition,
+      } : previous);
+      message.success('表结构已保存');
       const updated = await getModelingModel(modelId);
       if (current()) setModelInfo(updated);
-      if (current()) await loadStructure();
+      if (current() && !draftUnchanged()) {
+        message.info('已保存提交时的表结构，后续编辑已保留');
+        return;
+      }
+      if (current()) await loadStructure(draftUnchanged);
     } catch (error) {
       if (current()) {
-        setOdsCommitReview(null);
         message.error(error instanceof Error ? error.message : 'ODS 来源保存失败，请刷新后核验');
       }
     } finally {
@@ -1820,7 +1841,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
   const handlePublish = async (action: 'DIRECT' | 'APPROVAL' = 'DIRECT') => {
     const isCurrent = captureEditorResource();
     if (!isCurrent()) return;
-    if (!modelId) return;
+    if (!modelId || !structure) return;
     if (guardUnsavedBeforePublish()) return;
     setPublishing(true);
     try {
@@ -1829,20 +1850,6 @@ const emptyColumnDraft = (): ColumnDraft => ({
         ? await getModelingVersion(modelId, publishedNo)
         : null;
       if (!isCurrent()) return;
-      // 行主键 id 是保存时重建的易变字段，diff 与内容等值判断都应剔除（与后端语义投影口径一致）。
-      const stripVolatile = (view: unknown) => {
-        if (!view || typeof view !== 'object') return view;
-        const v = view as Record<string, unknown>;
-        return {
-          ...v,
-          columns: Array.isArray(v.columns)
-            ? v.columns.map(({ id: _id, ...rest }: Record<string, unknown>) => rest)
-            : v.columns,
-          indexes: Array.isArray(v.indexes)
-            ? v.indexes.map(({ id: _id, ...rest }: Record<string, unknown>) => rest)
-            : v.indexes,
-        };
-      };
       const nonOds = ['DWD', 'DIM', 'DWS', 'ADS'].includes(
         modelInfo?.layerCode?.toUpperCase() || '',
       );
@@ -1859,8 +1866,8 @@ const emptyColumnDraft = (): ColumnDraft => ({
       }
       if (!isCurrent()) return;
       setPublishPreview({
-        before: stripVolatile(published?.structure ?? null),
-        after: stripVolatile(structure ?? null),
+        before: published?.structure ?? null,
+        after: structure,
         publishedVersionNo: publishedNo ?? null,
         readiness,
         action,
@@ -2012,6 +2019,10 @@ const emptyColumnDraft = (): ColumnDraft => ({
   );
 
   const partitionTypes = structure?.dialect ? PARTITION_TYPES_BY_DIALECT[structure.dialect] : undefined;
+  const odsSourceDifference = useMemo(() =>
+    odsSourceSnapshot?.key === odsSourceKey && !odsSourceSnapshot.failed
+      ? compareOdsSourceColumns(odsSourceSnapshot.columns, rows, primaryKey) : null,
+  [odsSourceSnapshot, odsSourceKey, rows, primaryKey]);
 
   const columns: TableColumnsType<ColumnDraft> = useMemo(
     () => [
@@ -2025,7 +2036,10 @@ const emptyColumnDraft = (): ColumnDraft => ({
         title: '字段名',
         dataIndex: 'columnName',
         width: 160,
-        render: (value: string, record) => (
+        render: (value: string, record) => !showStandardControls ? (
+          <Input size="small" variant="filled" className="!w-full"
+            value={value} onChange={(event) => updateRow(record.key, { columnName: event.target.value })} />
+        ) : (
           <AutoComplete
             size="small"
             variant="filled"
@@ -2050,6 +2064,18 @@ const emptyColumnDraft = (): ColumnDraft => ({
           />
         ),
       },
+      ...(odsSourceDifference ? [{
+        title: '差异', key: 'sourceDifference', width: 110,
+        render: (_value: unknown, record: ColumnDraft) => {
+          const difference = odsSourceDifference.byTargetName.get(record.columnName.trim().toLowerCase());
+          if (difference?.kind === 'added') return <Tag color="blue">模型新增</Tag>;
+          if (difference?.kind === 'technical') return <Tag>技术字段</Tag>;
+          if (difference?.kind === 'changed') return (
+            <Tooltip title={difference.details.join('；')}><Tag color="warning">属性差异</Tag></Tooltip>
+          );
+          return <span className="text-[#98a2b3]">—</span>;
+        },
+      }] : []),
       {
         title: '类型',
         dataIndex: 'dataType',
@@ -2198,14 +2224,14 @@ const emptyColumnDraft = (): ColumnDraft => ({
           />
         ),
       },
-      {
+      ...(showStandardControls ? [{
         title: '数据标准',
         key: 'standards',
         width: 170,
         // C2(2026-09-17):只显示类型标准「名称（编码）」(不展示安全/命名等),无则显示空;
         // 非 ODS 层字段未绑定标准时显示警告提示。
         // 03 号单:绑定标准字段的行带出「影响」入口,按该标准字段反查各层落地。
-        render: (_value, record) => {
+        render: (_value: unknown, record: ColumnDraft) => {
           const typeName = record.stdTypeId ? standardNameById[record.stdTypeId] : undefined;
           const stdNode = typeName ? (
             <Tooltip title={typeName} placement="topLeft">
@@ -2237,7 +2263,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
             </span>
           );
         },
-      },
+      }] : []),
       ...(AGGREGATE_LAYERS.has(modelInfo?.layerCode || '')
         ? ([
             {
@@ -2313,14 +2339,14 @@ const emptyColumnDraft = (): ColumnDraft => ({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rows.length, primaryKey, indexes, partitionColumns, typeCatalog, standardNameById, modelInfo, standardFieldChoices],
+    [rows.length, primaryKey, indexes, partitionColumns, typeCatalog, standardNameById, modelInfo, showStandardControls, standardFieldChoices, odsSourceDifference],
   );
 
   const approvalPending = publishApproval?.status === 'PENDING';
 
   return (
-    <div className="modeling-studio-editor">
-      {coverageFeedback && coverageFeedback.projectId === currentProject?.id
+    <div className={'modeling-studio-editor' + (isOdsModel ? ' modeling-studio-editor-ods' : '')}>
+      {showStandardControls && coverageFeedback && coverageFeedback.projectId === currentProject?.id
         && coverageFeedback.baseline.modelId === Number(modelId) && (
         <Alert showIcon className="mb-4" type="info"
           message="已从治理报告定位到当前物理字段"
@@ -2332,11 +2358,11 @@ const emptyColumnDraft = (): ColumnDraft => ({
       )}
       <div className="modeling-studio-editor-head">
         <div>
-          <span className="modeling-studio-overline">当前模型 / {modelInfo?.layerCode || '物理模型'}</span>
-          <h2>设计编辑与版本发布</h2>
-          <p>保存结构草稿后，再检查映射、标准与发布条件；正式运行和写入不在此执行。</p>
-          <Space wrap size={6} className="!mt-2">
-            {modelInfo?.status ? <Tag color={modelInfo.status === 'PUBLISHED' ? 'success' : 'default'}>
+          {!isOdsModel ? <span className="modeling-studio-overline">当前模型 / {modelInfo?.layerCode || '物理模型'}</span> : null}
+          <h2>{isOdsModel ? '表结构' : '设计编辑与版本发布'}</h2>
+          {!isOdsModel ? <p>保存结构草稿后，再检查映射、标准与发布条件；正式运行和写入不在此执行。</p> : null}
+          {!isOdsModel || modelInfo?.latestVersionNo || dirty || publishApproval ? <Space wrap size={6} className="!mt-2">
+            {!isOdsModel && modelInfo?.status ? <Tag color={modelInfo.status === 'PUBLISHED' ? 'success' : 'default'}>
               {modelInfo.status === 'PUBLISHED' ? '已发布' : modelInfo.status === 'DRAFT' ? '草稿' : modelInfo.status}
             </Tag> : null}
             {modelInfo?.latestVersionNo ? <Tag>最新版本 V{modelInfo.latestVersionNo}</Tag> : null}
@@ -2347,77 +2373,67 @@ const emptyColumnDraft = (): ColumnDraft => ({
                 查看审批单
               </Button>
             </> : null}
-          </Space>
+          </Space> : null}
         </div>
-        <div className="modeling-studio-editor-main-actions">
-          {publishFlowEnabled ? <YakButton
-            disabled={loading || !structure || approvalPending}
-            loading={approvalSubmitting}
-            onClick={() => void handlePublish('APPROVAL')}>
-            提交发布审批
-          </YakButton> : <YakButton
-            disabled={loading || !structure || approvalPending} loading={publishing}
-            onClick={() => void handlePublish()}>发布设计</YakButton>}
-          <YakButton type="primary" loading={saving}
-            disabled={loading || !dirty || approvalPending}
-            onClick={() => void handleSave()}>
-            保存表结构
-          </YakButton>
-        </div>
-      </div>
-      <div className="modeling-studio-editor-tools">
-        <span>与当前对象有关的操作</span>
-        {modelInfo?.layerCode?.toUpperCase() === 'ODS' && modelInfo.sourceDatasourceId
-          && modelInfo.sourceDatabase && modelInfo.sourceTable ? (
-          <YakButton onClick={() => {
-            const qs = new URLSearchParams({ view: 'entity', datasourceId: String(modelInfo.sourceDatasourceId),
-              databaseName: modelInfo.sourceDatabase || '' });
-            const path = '/data-asset/catalog?' + qs.toString();
-            if (dirty) {
-              Modal.confirm({ title: '物理模型还有未保存的改动',
-                content: '离开会放弃当前未保存编辑。请先保存，或明确放弃后返回。',
-                okText: '放弃改动并返回', okType: 'danger', cancelText: '继续编辑',
-                onOk: () => history.push(path) });
-            } else history.push(path);
-          }}>返回来源表</YakButton>
-        ) : null}
-        {modelInfo?.layerCode?.toUpperCase() === 'ODS' && Number(modelInfo.latestVersionNo) > 0 ? (
-          <YakButton disabled={!modelId || dirty || loading || !canAll(['modeling:read','resource:data-source:read'])}
-            onClick={() => setOdsVersionEvidenceOpen(true)}>ODS 来源版本证据</YakButton>
-        ) : null}
-        {modelInfo?.layerCode?.toUpperCase() === 'DWD' && Number(modelInfo.latestVersionNo) > 0 ? (
-          <YakButton disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
-            onClick={() => setDwdHistoryOpen(true)}>DWD 映射历史</YakButton>
-        ) : null}
-        {['DWD','DIM','DWS','ADS'].includes(modelInfo?.layerCode?.toUpperCase() || '') ? (
-          <YakButton disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
-            onClick={() => setStandardCoverageOpen(true)}>标准覆盖核验</YakButton>
-        ) : null}
-        <details className="modeling-studio-more">
-          <summary>更多专业操作</summary>
-          <div className="modeling-studio-more-actions">
-            {returnAssetId && Number.isSafeInteger(returnAssetId) && returnAssetId > 0 ? (
-              <Button onClick={() => history.push('/data-asset/detail/' + returnAssetId)}>返回资产详情</Button>
+        <div className="modeling-studio-editor-actions" role="toolbar" aria-label="表结构操作">
+          <div className="modeling-studio-editor-tools">
+            {modelInfo?.layerCode?.toUpperCase() === 'ODS' && modelInfo.sourceDatasourceId
+              && modelInfo.sourceDatabase && modelInfo.sourceTable ? (
+              <YakButton onClick={() => {
+                const qs = new URLSearchParams({ view: 'entity', datasourceId: String(modelInfo.sourceDatasourceId),
+                  databaseName: modelInfo.sourceDatabase || '' });
+                const path = '/data-asset/catalog?' + qs.toString();
+                if (dirty) {
+                  Modal.confirm({ title: '物理模型还有未保存的改动',
+                    content: '离开会放弃当前未保存编辑。请先保存，或明确放弃后返回。',
+                    okText: '放弃改动并返回', okType: 'danger', cancelText: '继续编辑',
+                    onOk: () => history.push(path) });
+                } else history.push(path);
+              }}>返回来源表</YakButton>
             ) : null}
-            {modelInfo?.layerCode?.toUpperCase() === 'ODS' ? (
-              <Button disabled={!modelId || dirty || loading || !canAll(['modeling:read','resource:data-source:read'])}
-                onClick={() => setOdsPhysicalDeliveryOpen(true)}>目标库核验与离线同步</Button>
+            {modelInfo?.layerCode?.toUpperCase() === 'DWD' && Number(modelInfo.latestVersionNo) > 0 ? (
+              <YakButton disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
+                onClick={() => setDwdHistoryOpen(true)}>DWD 映射历史</YakButton>
+            ) : null}
+            {['DWD','DIM','DWS','ADS'].includes(modelInfo?.layerCode?.toUpperCase() || '') ? (
+              <YakButton disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
+                onClick={() => setStandardCoverageOpen(true)}>标准覆盖核验</YakButton>
+            ) : null}
+            {returnAssetId && Number.isSafeInteger(returnAssetId) && returnAssetId > 0 ? (
+              <YakButton onClick={() => history.push('/data-asset/detail/' + returnAssetId)}>返回资产详情</YakButton>
             ) : null}
             {['DWD','DIM'].includes(modelInfo?.layerCode?.toUpperCase() || '')
               && Number(modelInfo?.latestVersionNo) > 0 ? (
-              <Button disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
-                onClick={() => setDataDevHandoffOpen(true)}>DataDev 交接预检</Button>
+              <YakButton disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
+                onClick={() => setDataDevHandoffOpen(true)}>DataDev 交接预检</YakButton>
             ) : null}
-            <Button onClick={() => void handleGenerateDdl()}>生成建库脚本</Button>
-            {publishFlowEnabled ? <Button disabled={loading || !structure || approvalPending}
-              onClick={() => void handlePublish()} loading={publishing}>直接发布（按原有权限）</Button> : null}
-            {modelInfo?.layerCode === 'DWD' ? <Button
+            {modelInfo?.layerCode?.toUpperCase() !== 'ODS' ? (
+              <YakButton onClick={() => void handleGenerateDdl()}>生成建库脚本</YakButton>
+            ) : null}
+            {publishFlowEnabled ? <YakButton disabled={loading || !structure || approvalPending}
+              onClick={() => void handlePublish()} loading={publishing}>直接发布</YakButton> : null}
+            {modelInfo?.layerCode === 'DWD' ? <YakButton
               disabled={loading || saving || dirty || !structure || !canAll(['metric:create', 'modeling:read'])}
               onClick={() => history.push('/metric/manage?sourceModelId=' + encodeURIComponent(String(modelId)))}>
               继续设计指标
-            </Button> : null}
+            </YakButton> : null}
           </div>
-        </details>
+          <div className="modeling-studio-editor-main-actions">
+            {publishFlowEnabled ? <YakButton
+              disabled={loading || !structure || approvalPending}
+              loading={approvalSubmitting}
+              onClick={() => void handlePublish('APPROVAL')}>
+              提交发布审批
+            </YakButton> : <YakButton
+              disabled={loading || !structure || approvalPending} loading={publishing}
+              onClick={() => void handlePublish()}>发布设计</YakButton>}
+            <YakButton type="primary" loading={saving}
+              disabled={loading || !dirty || approvalPending}
+              onClick={() => void handleSave()}>
+              保存表结构
+            </YakButton>
+          </div>
+        </div>
       </div>
 
       {loading && !structure ? null : !structure ? (
@@ -2426,7 +2442,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
         </Card>
       ) : (
         <div className="space-y-4">
-          <div className="modeling-studio-layer-intro">
+          {!isOdsModel ? <div className="modeling-studio-layer-intro">
             <strong>{modelInfo?.layerCode || '物理'} · 当前模型设计任务</strong>
             <p>{({
               ODS: '来源核验 → ODS 物理结构 → 保存并返回来源；资产治理独立进行。',
@@ -2436,8 +2452,8 @@ const emptyColumnDraft = (): ColumnDraft => ({
               ADS: '先完成下方应用输出六步工作流；物理表结构作为独立编辑区按需展开。',
             } as Record<string, string>)[(modelInfo?.layerCode || '').toUpperCase()] ||
               '先核对业务定义和目标，再编辑物理字段、映射与版本。'}</p>
-          </div>
-          <div className="modeling-studio-specialized">
+          </div> : null}
+          {!isOdsModel ? <div className="modeling-studio-specialized">
           {modelInfo?.layerCode === 'DWS' && modelId ? (
             <DwsGrainDesignPanel
               key={`${currentProject?.id ?? 'none'}:${modelId}`}
@@ -2469,15 +2485,15 @@ const emptyColumnDraft = (): ColumnDraft => ({
             />
           ) : null}
 
-          </div>
+          </div> : null}
           <section className="modeling-studio-foundation" aria-label="物理表结构设计">
-            <button type="button" className="modeling-studio-foundation-head !w-full !text-left"
+            {!isOdsModel ? <button type="button" className="modeling-studio-foundation-head !w-full !text-left"
               aria-expanded={foundationOpen} onClick={() => setFoundationOpen(value => !value)}>
               <span><strong>物理表结构与技术属性</strong>
                 <small className="!ml-3 !text-[#728199]">字段、主键、分区、索引和表属性均保留原有服务端保存能力</small></span>
               <strong>{foundationOpen ? '收起' : '展开编辑'}</strong>
-            </button>
-            {foundationOpen ? <div className="space-y-4">
+            </button> : null}
+            {isOdsModel || foundationOpen ? <div className="space-y-4">
           <Card
             bordered={false}
             title="表基础信息"
@@ -2547,7 +2563,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
             bordered={false}
             title="字段列表"
             extra={
-              modelInfo?.layerCode && modelInfo.layerCode !== 'ODS' ? (
+              showStandardControls ? (
                 (() => {
                   const ungovernedCount = rows.filter((r) => !r.stdTypeId).length;
                   return ungovernedCount > 0 ? (
@@ -2564,6 +2580,24 @@ const emptyColumnDraft = (): ColumnDraft => ({
               ) : null
             }
           >
+            {odsSourceDifference && (odsSourceDifference.sourceOnly.length
+              + odsSourceDifference.modelOnly.length + odsSourceDifference.changed.length > 0) ? (
+              <div className="mb-3 rounded-lg border border-[#fedf89] bg-[#fffcf5] px-3 py-2" role="status">
+                <div className="flex flex-wrap items-center gap-2 text-[12px] text-[#93370d]">
+                  <span className="font-medium">与源表存在字段差异</span>
+                  {odsSourceDifference.sourceOnly.length ? <span>源表独有 {odsSourceDifference.sourceOnly.length}</span> : null}
+                  {odsSourceDifference.modelOnly.length ? <span>模型新增 {odsSourceDifference.modelOnly.length}</span> : null}
+                  {odsSourceDifference.changed.length ? <span>属性差异 {odsSourceDifference.changed.length}</span> : null}
+                </div>
+                {odsSourceDifference.sourceOnly.length ? <div className="mt-2 flex flex-wrap items-center gap-1 text-[12px] text-[#667085]">
+                  <span>源表独有：</span>
+                  {odsSourceDifference.sourceOnly.map(name => <Tag key={name} color="warning" className="!m-0">{name}</Tag>)}
+                </div> : null}
+              </div>
+            ) : null}
+            {odsSourceSnapshot?.key === odsSourceKey && odsSourceSnapshot.failed ? (
+              <div className="mb-3 text-[12px] text-[#b54708]">来源字段暂不可读取，无法比较差异</div>
+            ) : null}
             {/* C3(2026-09-17):批量添加/批量删除/刷新工具栏 */}
             {rows.length ? (
               <div className="mb-2 flex items-center justify-between gap-2">
@@ -2580,24 +2614,26 @@ const emptyColumnDraft = (): ColumnDraft => ({
                       从源表导入
                     </Button>
                   </Tooltip>
-                  <Tooltip title="从其他已有模型导入字段">
-                    <Button
-                      size="small"
-                      icon={<CopyOutlined />}
-                      onClick={() => void handleOpenImportFromModel()}
-                    >
-                      从模型导入
-                    </Button>
-                  </Tooltip>
-                  <Tooltip title="从业务过程继承字段">
-                    <Button
-                      size="small"
-                      icon={<ApartmentOutlined />}
-                      onClick={() => void handleOpenImportFromProcess()}
-                    >
-                      从业务过程导入
-                    </Button>
-                  </Tooltip>
+                  {!isOdsModel ? <>
+                    <Tooltip title="从其他已有模型导入字段">
+                      <Button
+                        size="small"
+                        icon={<CopyOutlined />}
+                        onClick={() => void handleOpenImportFromModel()}
+                      >
+                        从模型导入
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title="从业务过程继承字段">
+                      <Button
+                        size="small"
+                        icon={<ApartmentOutlined />}
+                        onClick={() => void handleOpenImportFromProcess()}
+                      >
+                        从业务过程导入
+                      </Button>
+                    </Tooltip>
+                  </> : null}
                   {AGGREGATE_LAYERS.has(modelInfo?.layerCode || '') && (
                     <Tooltip title="选择指标,反推上游模型/统计周期/度量维度并并入表结构">
                       <Button
@@ -2621,18 +2657,22 @@ const emptyColumnDraft = (): ColumnDraft => ({
                       </Button>
                     </Tooltip>
                   )}
-                  <Tooltip title="按字段名匹配标准字段集,自动回填类型/单位/口径/安全等标准绑定">
-                    <Button
-                      size="small"
-                      icon={<ThunderboltOutlined />}
-                      loading={discoverLoading}
-                      onClick={() => void handleStandardDiscover()}
-                    >
-                      标准发现
-                    </Button>
-                  </Tooltip>
-                  <Button size="small" disabled={!selectedRowKeys.length || selectedRowKeys.length > 5 || !canAll(['agent:chat:run', 'agent:session:read', 'modeling:update', 'semantic:read'])}
-                    onClick={() => setBatchAssistantOpen(true)}>批量 AI 标准辅助</Button>
+                  {showStandardControls ? (
+                    <>
+                      <Tooltip title="按字段名匹配标准字段集,自动回填类型/单位/口径/安全等标准绑定">
+                        <Button
+                          size="small"
+                          icon={<ThunderboltOutlined />}
+                          loading={discoverLoading}
+                          onClick={() => void handleStandardDiscover()}
+                        >
+                          标准发现
+                        </Button>
+                      </Tooltip>
+                      <Button size="small" disabled={!selectedRowKeys.length || selectedRowKeys.length > 5 || !canAll(['agent:chat:run', 'agent:session:read', 'modeling:update', 'semantic:read'])}
+                        onClick={() => setBatchAssistantOpen(true)}>批量 AI 标准辅助</Button>
+                    </>
+                  ) : null}
                   <Button size="small" danger disabled={!selectedRowKeys.length} onClick={handleBatchDelete}>
                     批量删除{selectedRowKeys.length ? `（${selectedRowKeys.length}）` : ''}
                   </Button>
@@ -2660,6 +2700,11 @@ const emptyColumnDraft = (): ColumnDraft => ({
                     size="small"
                     columns={columns}
                     dataSource={rows}
+                    rowClassName={row => {
+                      const difference = odsSourceDifference?.byTargetName.get(row.columnName.trim().toLowerCase());
+                      return difference?.kind === 'changed' ? 'modeling-ods-field-changed'
+                        : difference?.kind === 'added' ? 'modeling-ods-field-added' : '';
+                    }}
                     pagination={false}
                     scroll={{ x: 'max-content' }}
                     rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
@@ -2703,7 +2748,8 @@ const emptyColumnDraft = (): ColumnDraft => ({
               <YakEmpty
                 compact
                 title="还没有字段"
-                description="选择以下方式导入字段，或手动添加"
+                description={isOdsModel ? undefined : '选择以下方式导入字段，或手动添加'}
+                className={isOdsModel ? '!min-h-0 !py-4' : undefined}
               >
                 <Space>
                   <Button
@@ -2713,12 +2759,14 @@ const emptyColumnDraft = (): ColumnDraft => ({
                   >
                     从源表导入
                   </Button>
-                  <Button icon={<CopyOutlined />} onClick={() => void handleOpenImportFromModel()}>
-                    从模型导入
-                  </Button>
-                  <Button icon={<ApartmentOutlined />} onClick={() => void handleOpenImportFromProcess()}>
-                    从业务过程导入
-                  </Button>
+                  {!isOdsModel ? <>
+                    <Button icon={<CopyOutlined />} onClick={() => void handleOpenImportFromModel()}>
+                      从模型导入
+                    </Button>
+                    <Button icon={<ApartmentOutlined />} onClick={() => void handleOpenImportFromProcess()}>
+                      从业务过程导入
+                    </Button>
+                  </> : null}
                   {AGGREGATE_LAYERS.has(modelInfo?.layerCode || '') && (
                     <Button icon={<FundOutlined />} onClick={() => void handleOpenMetricDraft()}>
                       按指标反推
@@ -2758,61 +2806,6 @@ const emptyColumnDraft = (): ColumnDraft => ({
               <span className="text-[13px] text-[#475467]">新增行数</span>
               <InputNumber min={1} max={100} value={bulkAddCount} onChange={(value) => setBulkAddCount(value ?? 5)} />
             </div>
-          </Modal>
-
-          {/* Real catalog columns are user-reviewed BEFORE first ODS atomic save. */}
-          <Modal
-            title="确认 ODS 首次来源映射与表结构"
-            open={Boolean(odsCommitReview)}
-            width={880}
-            okText="确认全部源列并原子保存"
-            confirmLoading={saving}
-            okButtonProps={{ disabled: !odsCommitReview
-              || Object.keys(odsCommitReview.mappings).length !== odsCommitReview.sourceColumns.length }}
-            onOk={() => void confirmOdsFirstImport()}
-            onCancel={() => { if (!saving) setOdsCommitReview(null); }}>
-            {odsCommitReview && <>
-              <Typography.Paragraph type="secondary">
-                正式来源：#{odsCommitReview.source.datasourceId} · {odsCommitReview.source.database}.{odsCommitReview.source.table}
-              </Typography.Paragraph>
-              <Typography.Paragraph type="secondary">
-                草稿版本证据：
-                <Typography.Text copyable={{ text: odsCommitReview.definition }}>
-                  {odsCommitReview.definition.slice(0, 16)}…
-                </Typography.Text>
-              </Typography.Paragraph>
-              <Typography.Paragraph>
-                请核实全部 {odsCommitReview.sourceColumns.length} 个真实源列对应的 ODS 物理目标列。
-                同名只是初始预选；更名后需人工配对。取消不会保存结构、来源身份或逐列映射。
-                系统确认时会重新读取真实源表、核对物理草稿并完成事务回读。
-              </Typography.Paragraph>
-              <Table size="small" pagination={{ pageSize: 15 }} rowKey="source"
-                dataSource={odsCommitReview.sourceColumns.map((source) => ({ source }))} columns={[
-                  { title: '真实源列', dataIndex: 'source' },
-                  { title: '对应的 ODS 目标列', key: 'target',
-                    render: (_, row) => {
-                      const selectedTarget = Object.keys(odsCommitReview.mappings)
-                        .find((target) => odsCommitReview.mappings[target] === row.source);
-                      return <Select<string> showSearch allowClear optionFilterProp="label"
-                        style={{ width: 310 }}
-                        placeholder="选择物理目标列"
-                        value={selectedTarget}
-                        options={odsCommitReview.structure.columns.map((column) => ({
-                          value: column.columnName, label: column.columnName,
-                        }))}
-                        onChange={(value) => setOdsCommitReview((prev) => {
-                          if (!prev) return prev;
-                          const next = { ...prev.mappings };
-                          for (const target of Object.keys(next)) {
-                            if (next[target] === row.source) delete next[target];
-                          }
-                          if (value) next[value] = row.source;
-                          return { ...prev, mappings: next };
-                        })}
-                      />;
-                    } },
-                ]} />
-            </>}
           </Modal>
 
           {/* 导入字段弹窗 */}
@@ -3055,6 +3048,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
           <Card
             bordered={false}
             title="索引"
+            styles={isOdsModel && indexCollapsed ? { body: { display: 'none' } } : undefined}
             extra={
               <Space size={4}>
                 {/* B9(2026-09-17):索引区默认折叠 */}
@@ -3083,12 +3077,12 @@ const emptyColumnDraft = (): ColumnDraft => ({
               </Space>
             }
           >
-            {indexCollapsed ? (
+            {indexCollapsed ? (isOdsModel ? null : (
               <Typography.Text type="secondary" className="!text-[12px]">
                 已折叠，点击右上角「展开」查看/编辑索引。
               </Typography.Text>
-            ) : indexes.length === 0 ? (
-              <YakEmpty compact title="暂无索引" description="点击右上角“添加索引”创建二级索引" />
+            )) : indexes.length === 0 ? (
+              <YakEmpty compact title="暂无索引" description={isOdsModel ? undefined : '点击右上角“添加索引”创建二级索引'} />
             ) : (
               <div className="space-y-3">
                 {indexes.map((index) => (
@@ -3192,7 +3186,8 @@ const emptyColumnDraft = (): ColumnDraft => ({
             }
           >
             {properties.length === 0 ? (
-              <YakEmpty compact title="暂无表属性" description="按需添加键值属性（如 ENGINE、CHARSET）" />
+              <YakEmpty compact title="暂无表属性" description={isOdsModel ? undefined : '按需添加键值属性（如 ENGINE、CHARSET）'}
+                className={isOdsModel ? '!min-h-0 !py-3' : undefined} />
             ) : (
               <div className="space-y-2">
                 {properties.map((property) => (
@@ -3251,7 +3246,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
           layerCode={modelInfo?.layerCode} open={dataDevHandoffOpen}
           onClose={() => setDataDevHandoffOpen(false)} />
       )}
-      {modelId && standardCoverageOpen && (
+      {showStandardControls && modelId && standardCoverageOpen && (
         <PhysicalStandardCoveragePanel
           modelId={Number(modelId)} open={standardCoverageOpen}
           onClose={() => setStandardCoverageOpen(false)}
@@ -3264,29 +3259,20 @@ const emptyColumnDraft = (): ColumnDraft => ({
         <DwdPublishedMappingHistoryPanel open={dwdHistoryOpen}
           modelId={Number(modelId)} onClose={() => setDwdHistoryOpen(false)} />
       )}
-      {modelId && modelInfo && odsPhysicalDeliveryOpen && (
-        <OdsPhysicalDeliveryPanel
-          open={odsPhysicalDeliveryOpen} model={modelInfo}
-          onClose={() => setOdsPhysicalDeliveryOpen(false)} />
-      )}
 
-      {modelId && odsVersionEvidenceOpen && (
-        <OdsPublishedVersionEvidencePanel
-          open={odsVersionEvidenceOpen} modelId={Number(modelId)}
-          onClose={() => setOdsVersionEvidenceOpen(false)} />
-      )}
       <Modal
         open={publishPreview !== null}
-        width={820}
+        width={680}
         centered
+        styles={{ body: { maxHeight: '65vh', overflowY: 'auto' } }}
         title={
-          publishPreview?.publishedVersionNo
-            ? `发布确认：草稿 vs 线上 V${publishPreview.publishedVersionNo}`
-            : '发布确认：首次发布'
+          publishPreview?.action === 'APPROVAL' ? '提交发布审批'
+            : publishPreview?.publishedVersionNo ? '发布新版本' : '首次发布'
         }
-        okText={publishPreview?.action === 'APPROVAL' ? '确认提交发布审批' : '确认发布'}
+        okText={publishPreview?.action === 'APPROVAL' ? '提交审批'
+          : `发布 V${(publishPreview?.publishedVersionNo ?? 0) + 1}`}
         cancelText="取消"
-        confirmLoading={publishing}
+        confirmLoading={publishing || approvalSubmitting}
         okButtonProps={{
           disabled: ['DWD', 'DIM', 'DWS', 'ADS'].includes(
             modelInfo?.layerCode?.toUpperCase() || '',
@@ -3305,9 +3291,11 @@ const emptyColumnDraft = (): ColumnDraft => ({
         }}
         onCancel={() => setPublishPreview(null)}
       >
-        <div className="mb-2 text-[12px] text-[#667085]">
-          发布将把当前已保存的结构固化为新版本；血缘/派生/建库脚本等消费方从此读取该快照。
-        </div>
+        {publishPreview ? <ModelPublishSummary
+          key={`${modelId}:${publishPreview.publishedVersionNo}:${publishPreview.action}`}
+          before={publishPreview.before} after={publishPreview.after}
+          publishedVersionNo={publishPreview.publishedVersionNo}
+          layerCode={modelInfo?.layerCode} approval={publishPreview.action === 'APPROVAL'} /> : null}
         {['DWD', 'DIM', 'DWS', 'ADS'].includes(modelInfo?.layerCode?.toUpperCase() || '') ? (
           <div className="mb-3 space-y-2" aria-label="发布前全列标准证据">
             <Alert
@@ -3385,10 +3373,6 @@ const emptyColumnDraft = (): ColumnDraft => ({
             </Button>
           </div>
         ) : null}
-        <JsonDiffView
-          before={publishPreview?.before ?? null}
-          after={publishPreview?.after ?? null}
-        />
       </Modal>
       <Modal
         open={ddlOpen}
@@ -3414,7 +3398,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
           </pre>
         )}
       </Modal>
-      {batchAssistantOpen && modelId && <BatchStandardAssistant
+      {showStandardControls && batchAssistantOpen && modelId && <BatchStandardAssistant
         key={JSON.stringify([currentProject?.id, modelId, structure?.definition])}
         modelId={Number(modelId)} definition={structure?.definition ?? ''} rows={rows}
         selectedKeys={selectedRowKeys.map(Number)}
@@ -3424,7 +3408,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
           if (JSON.stringify(rows.find(row => row.key === key)) !== original) { message.warning('字段已修改，请重新生成'); return; }
           updateRow(key, patch);
         }} />}
-      <StandardAssistantDrawer
+      {showStandardControls && <StandardAssistantDrawer
         scopeKey={JSON.stringify([currentProject?.id, modelId, assistantRowKey, rows.find(row => row.key === assistantRowKey)])}
         aiDisabled={loading || saving || publishing}
         businessDescription={rows.find((row) => row.key === assistantRowKey)?.businessDescription ?? ''}
@@ -3447,8 +3431,10 @@ const emptyColumnDraft = (): ColumnDraft => ({
             updateRow(assistantRowKey, patch);
           }
         }}
-      />
+      />}
       <style>{`
+        .modeling-ods-field-changed > td { background: #fffcf5 !important; }
+        .modeling-ods-field-added > td { background: #f5f9ff !important; }
         .validation-highlight-row > td {
           background: #fff7e6 !important;
           transition: background 0.3s ease;

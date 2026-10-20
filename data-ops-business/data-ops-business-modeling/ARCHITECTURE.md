@@ -60,6 +60,8 @@ overview/     项目空间全域视图(服务端聚合,ticket 29)
 5. **统计/总览只做服务端聚合**,禁止无界 list() 后内存统计(home-overview-contract)。
 6. Flyway migration 只增不改:已合入的 migration 文件不可修改。
 
+模型血缘读取由 `lineage.ModelingLineageGraphReader` 组合本域来源绑定与 `LineageQueryService` 的已登记图，使用共享 `PhysicalTableAssetKey` 定位物理来源；未登记节点/连线仅作响应投影。读取不调用登记服务，登记仍由原显式写入口承担，不新增血缘存储或跨域依赖。
+
 ## Flyway 历史兼容
 
 `yak-modeling` 保存公共迁移和累计基线。V22 和 V24 均存在不同的历史脚本，启动时读取

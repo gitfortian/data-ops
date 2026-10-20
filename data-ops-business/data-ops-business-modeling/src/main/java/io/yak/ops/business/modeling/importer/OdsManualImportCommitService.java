@@ -162,8 +162,8 @@ public class OdsManualImportCommitService {
     if (sourceColumns == null || sourceColumns.isEmpty()
         || sourceColumns.size() > MAX_COLUMNS || targets.isEmpty()
         || targets.size() > MAX_COLUMNS || selected == null
-        || selected.size() != sourceColumns.size()) {
-      throw reject("ODS 镜像必须明确映射全部真实源列，列数为空、过多或不一致");
+        || selected.size() > MAX_COLUMNS) {
+      throw reject("来源或目标列为空、过多，或来源映射列表缺失");
     }
     Map<String, CatalogColumn> sources = new HashMap<>();
     for (CatalogColumn source : sourceColumns) {
@@ -188,21 +188,11 @@ public class OdsManualImportCommitService {
           || !physical.containsKey(key(pair.targetColumn()))
           || !selectedSources.add(key(pair.sourceColumn()))
           || !selectedTargets.add(key(pair.targetColumn()))) {
-        throw reject("来源与物理目标必须为真实存在的一对一明确选择，禁止按名称推断");
+        throw reject("来源映射必须引用当前源表和模型内的真实字段，且不能重复");
       }
     }
-    if (selectedSources.size() != sources.size()) {
-      throw reject("存在未覆盖的真实源列，不能将结构导入冒充正式来源映射");
-    }
-    // Platform-generated columns are allowed ONLY when the real catalog
-    // doesn't contain them; they must not be falsely represented as source.
-    for (String targetName : physical.keySet()) {
-      if (!selectedTargets.contains(targetName)
-          && !("process_time".equals(targetName) || "event_time".equals(targetName))
-          ) {
-        throw reject("字段 " + targetName + " 没有真实源列映射，也不是平台技术字段");
-      }
-    }
+    // ODS designs may omit source columns or add their own columns. Persist only
+    // the supplied real mappings; unmatched columns do not imply provenance.
 
     // Keep the row lock for the entire transaction. Structure service applies
     // its existing validation, optimistic evidence and audit policy.

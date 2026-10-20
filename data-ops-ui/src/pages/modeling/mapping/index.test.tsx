@@ -37,9 +37,10 @@ beforeEach(() => {
 it('adopts into the original form, clears an old expression, then manually saves with the loaded baseline and reloads', async () => {
   render(<MappingPage />);
   fireEvent.click(await screen.findByText('编辑'));
+  fireEvent.click(await screen.findByText('AI 辅助选字段'));
   fireEvent.click(await screen.findByText('AI 带入 baseline'));
   expect(setModelingMapping).not.toHaveBeenCalled();
-  expect(screen.getByPlaceholderText('如 CAST(amount AS DECIMAL(18,2))')).toHaveValue('');
+  expect(screen.getByPlaceholderText('留空则直接使用源字段')).toHaveValue('');
   fireEvent.click(screen.getByText(/^保\s*存$/).closest('button')!);
   await waitFor(() => expect(setModelingMapping).toHaveBeenCalledWith('7', 'user_id', expect.objectContaining({ sourceColumn: 'buyer_id', transformExpr: undefined }), 'baseline'));
   await waitFor(() => expect(listModelingMappings).toHaveBeenCalledTimes(2));
