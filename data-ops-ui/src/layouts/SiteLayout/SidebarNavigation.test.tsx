@@ -51,10 +51,12 @@ describe('IA-550 fixed global rail + independent business context rail', () => {
     render(React.createElement(SidebarNavigation, {
       ...props, groups, standaloneRoutes: [], activeId: 'semantic-processes',
     }));
-    const context = screen.getByRole('navigation', { name: '标准、指标与建模页面' });
-    expect(within(context).queryByRole('link', { name: '模型总览' })).not.toBeInTheDocument();
-    expect(within(context).queryByRole('link', { name: '逻辑模型' })).not.toBeInTheDocument();
-    expect(within(context).queryByRole('link', { name: '物理模型' })).not.toBeInTheDocument();
+    // Without the Modeling grant the entire section may legitimately be absent,
+    // so do not assert a context rail that the RBAC filter did not create.
+    expect(groups.every(group => !group.routes.some(route => route.id === 'modeling-workspace'))).toBe(true);
+    expect(screen.queryByRole('link', { name: '模型总览' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '逻辑模型' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '物理模型' })).not.toBeInTheDocument();
   });
 
   it('switches the right rail without hiding the five global domains', () => {
