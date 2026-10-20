@@ -1,5 +1,5 @@
 export default {
-  'pages.batchLinkUp.page.title': 'Offline Sync',
+  'pages.batchLinkUp.page.title': 'Task Management',
   'pages.batchLinkUp.page.create': 'New Sync Task',
   'pages.batchLinkUp.page.tipLabel': '[Tip]',
   'pages.batchLinkUp.page.tipContent': 'A publish action is now part of the task workflow. Make sure the task is online before starting it.',

@@ -13,7 +13,7 @@ const OfflineSyncPageHeader = ({ onCreate }: OfflineSyncPageHeaderProps) => {
     <div>
       <div className="flex min-h-10 items-start justify-between gap-6">
         <div>
-          <h1 className="m-0 text-[17px] font-semibold text-[#161823]">任务管理</h1>
+          <h1 className="m-0 text-[17px] font-semibold text-[#161823]">{intl.formatMessage({ id: 'pages.batchLinkUp.page.title' })}</h1>
           <p className="m-0 mt-1 text-xs text-[#667085]">管理离线同步任务及其配置、运行记录。</p>
         </div>
 
