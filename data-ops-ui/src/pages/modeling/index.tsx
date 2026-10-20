@@ -7,7 +7,6 @@ import {
   Input,
   Modal,
   message,
-  Segmented,
   Select,
   Space,
   Table,
@@ -26,6 +25,7 @@ import ModelingStartGuide from '@/pages/modeling/components/ModelingStartGuide';
 import ModelEditModal from '@/pages/modeling/components/ModelEditModal';
 import OdsSourceJourney from '@/pages/modeling/components/OdsSourceJourney';
 import ModelTreePane from '@/pages/modeling/components/ModelTreePane';
+import ModelingStudioHeader from '@/pages/modeling/components/ModelingStudioHeader';
 import RecycleBinDrawer from '@/pages/modeling/components/RecycleBinDrawer';
 import TagManageModal from '@/pages/modeling/components/TagManageModal';
 import {
@@ -540,10 +540,18 @@ const ModelingWorkspace: React.FC = () => {
     [actionId, domainNameById, tagNameById, hiddenColumns],
   );
 
-  if (searchParams.get('sourceJourney') === 'ods') return <OdsSourceJourney />;
+  if (searchParams.get('sourceJourney') === 'ods') return (
+    <div className="modeling-studio-page modeling-studio-detail">
+      <ModelingStudioHeader area="physical" title="ODS · 来源建模" eyebrow="数据建设 / 来源到 ODS"
+        description="核对真实来源表，选择或创建 ODS 物理目标；保存后返回同一来源。资产纳管与本操作相互独立。"
+        actions={<Button onClick={() => history.push('/modeling')}>返回模型总览</Button>} />
+      <OdsSourceJourney />
+    </div>
+  );
 
   return (
-    <div className="flex min-h-[calc(100dvh-64px)] bg-white text-[#242731]">
+    <div className="modeling-studio-page modeling-studio-catalog">
+      <aside className="modeling-studio-catalog-rail">
       <ModelTreePane
         domainTree={domainTree}
         semanticLoading={optionsLoading}
@@ -560,64 +568,32 @@ const ModelingWorkspace: React.FC = () => {
         onCollapsedChange={setTreeCollapsed}
         onGoSemantic={goSemantic}
       />
+      </aside>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col px-6 pb-4 pt-5 max-md:px-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="text-[20px] font-semibold leading-7">模型工作台</div>
-            <div className="mt-1 text-[13px] text-[#667085]">
-              管理项目空间内的数仓物理模型：表结构设计、来源映射与模型资产视图
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Input.Search allowClear placeholder="按名称或编码搜索" className="!w-[240px]" onSearch={handleSearch} />
-            {/* 同一个建模域的业务层专业入口，不新增顶层菜单。 */}
+      <div className="modeling-studio-catalog-body">
+        <ModelingStudioHeader area="catalog" title="数仓模型设计中心"
+          description="围绕业务过程组织逻辑与物理设计。选择分层进入真实模型；版本、标准与加工证据分别核验。"
+          context={<><span>当前项目 #{currentProjectId ?? '未选定'}</span><span>当前筛选：{total} 个物理模型</span></>}
+          actions={<>
+            <Input.Search allowClear placeholder="搜索模型名称或编码" className="!w-[230px]"
+              onSearch={handleSearch} />
             <Button onClick={() => history.push(journeyProcess
-              ? processToLogical(journeyProcess.id) : '/modeling/logical')}>业务逻辑模型</Button>
-            {/* 视图切换(2026-09-17):列表 / 主线视图不再是独立入口 */}
-            <Segmented
-              value="list"
-              options={[
-                { label: '列表', value: 'list' },
-                { label: '主线视图', value: 'mainline' },
-              ]}
-              onChange={(value) => {
-                if (value === 'mainline') {
-                  history.push('/modeling/mainline');
-                }
-              }}
-            />
-            {/* 管理类(2026-09-17):回收站/标签管理收进"更多" */}
-            <Dropdown
-              menu={{
-                items: [
-                  { key: 'recycle', label: '回收站' },
-                  { key: 'tags', label: '标签管理' },
-                ],
-                onClick: ({ key }) => {
-                  if (key === 'recycle') setRecycleOpen(true);
-                  if (key === 'tags') setTagsManageOpen(true);
-                },
-              }}
-            >
-              <YakButton className="!h-9 !rounded-lg !px-4">
-                更多
-                <DownOutlined style={{ fontSize: 10 }} />
-              </YakButton>
+              ? processToLogical(journeyProcess.id) : '/modeling/logical')}>逻辑模型</Button>
+            <Button onClick={() => history.push('/modeling/mainline')}>分层主线</Button>
+            <Dropdown menu={{ items: [
+              { key: 'recycle', label: '回收站' },
+              { key: 'tags', label: '标签管理' },
+            ], onClick: ({ key }) => {
+              if (key === 'recycle') setRecycleOpen(true);
+              if (key === 'tags') setTagsManageOpen(true);
+            } }}>
+              <Button>管理 <DownOutlined /></Button>
             </Dropdown>
-            {/* 创建类主入口(2026-09-17):统一"新建模型"按钮打开向导抽屉 */}
-            <YakButton
-              type="primary"
-              className="!h-9 !rounded-lg !px-4 !text-white"
-              onClick={() => setWizardOpen(true)}
-              disabled={Boolean(journeyProblem) || !journeyReady || optionsLoading || !can('modeling:create')}
-              title={!journeyReady ? '正在核验当前业务过程与项目归属' : undefined}
-            >
+            <Button type="primary" onClick={() => setWizardOpen(true)}
+              disabled={Boolean(journeyProblem) || !journeyReady || optionsLoading || !can('modeling:create')}>
               新建物理草稿
-            </YakButton>
-          </div>
-        </div>
-
+            </Button>
+          </>} />
         {journeyProblem && <div role="alert" className="mb-3">
           <span className="text-red-600">{journeyProblem}</span>
           <Button onClick={() => history.push('/semantic/processes')}>返回业务过程</Button>
@@ -632,6 +608,28 @@ const ModelingWorkspace: React.FC = () => {
           canCreate={can('modeling:create') && !Boolean(journeyProblem) && journeyReady && !optionsLoading}
           loading={optionsLoading || !journeyReady}
         />
+        <section className="modeling-studio-layer-panel" aria-label="模型分层导航">
+          <div className="modeling-studio-section-header">
+            <div>
+              <span className="modeling-studio-overline">物理设计工作区</span>
+              <h2>按数仓分层查找模型</h2>
+              <p>仅展示当前项目已配置的分层。切换后重新查询服务端，不用当前页数据推断项目总量。</p>
+            </div>
+            <span className="modeling-studio-hint">ODS 来源贴合 · 非 ODS 需审阅逻辑依据与数据标准</span>
+          </div>
+          <div className="modeling-studio-layer-list" role="group" aria-label="选择数仓分层">
+            <button type="button" className={'modeling-studio-layer-item' + (!layerFilter ? ' is-active' : '')}
+              aria-pressed={!layerFilter} onClick={() => { setLayerFilter(undefined); setDbFilter(undefined); setPageNo(1); }}>
+              全部模型
+            </button>
+            {layers.map((layer) => <button key={layer.code} type="button"
+              className={'modeling-studio-layer-item' + (layerFilter === layer.code ? ' is-active' : '')}
+              aria-pressed={layerFilter === layer.code}
+              onClick={() => { setLayerFilter(layer.code); setDbFilter(undefined); setPageNo(1); }}>
+              {layer.name || layer.code} · {layer.code}
+            </button>)}
+          </div>
+        </section>
         {journeyProcess && <div className="mb-3 flex flex-wrap items-center gap-3 text-[12px] text-[#667085]">
           <span>当前过程筛选：<strong>{journeyProcess.name}</strong>（{journeyProcess.code}）</span>
           {can('data-development:read') && <Tooltip
@@ -642,7 +640,15 @@ const ModelingWorkspace: React.FC = () => {
           </Tooltip>}
           <Button type="link" size="small" onClick={clearJourney}>清除过程筛选</Button>
         </div>}
-        <div className="mb-3 mt-4 flex flex-wrap items-center gap-2">
+        <section className="modeling-studio-catalog-results" aria-label="模型查询结果">
+          <div className="modeling-studio-section-header">
+            <div>
+              <span className="modeling-studio-overline">已保存的模型对象</span>
+              <h2>物理模型库 <span className="!text-[12px] !font-normal !text-[#7a8798]">共 {total} 条查询结果</span></h2>
+              <p>选择模型继续编辑、检查来源映射或查看冻结版本。</p>
+            </div>
+          </div>
+          <div className="mb-3 mt-4 flex flex-wrap items-center gap-2">
           {/* 目录 vs 标签职责提示(2026-09-17):目录=层级分类,标签=横向标记 */}
           <Tooltip title="目录=层级分类(如 交易/订单)；标签=横向标记(如 核心模型/临时模型)">
             <span className="cursor-help text-[13px] text-[#667085]">标签筛选</span>
@@ -657,17 +663,6 @@ const ModelingWorkspace: React.FC = () => {
             options={tags.map((tag) => ({ value: tag.id!, label: tag.name! }))}
             onChange={(values) => {
               setSelectedTagIds(values);
-              setPageNo(1);
-            }}
-          />
-          <Select
-            allowClear
-            placeholder="全部分层"
-            className="min-w-[120px]"
-            value={layerFilter}
-            options={layers.map((layer) => ({ value: layer.code, label: layer.name }))}
-            onChange={(value) => {
-              setLayerFilter(value);
               setPageNo(1);
             }}
           />
@@ -848,6 +843,7 @@ const ModelingWorkspace: React.FC = () => {
             },
           }}
         />
+        </section>
       </div>
 
       <ModelEditModal

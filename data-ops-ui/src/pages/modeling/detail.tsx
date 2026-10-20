@@ -166,6 +166,10 @@ const emptyColumnDraft = (): ColumnDraft => ({
     : undefined;
   const [structure, setStructure] = useState<ModelingStructureRecord>();
   const [modelInfo, setModelInfo] = useState<ModelingModelRecord | null>(null);
+  const [foundationOpen, setFoundationOpen] = useState(true);
+  useEffect(() => {
+    setFoundationOpen(!['DWS', 'ADS'].includes((modelInfo?.layerCode || '').toUpperCase()));
+  }, [modelInfo?.layerCode]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   // The unified view's source-return action must not bypass the draft owner.
@@ -1953,9 +1957,13 @@ const emptyColumnDraft = (): ColumnDraft => ({
     }
     setStandardCoverageOpen(false);
     setCoverageFeedback({ projectId: currentProject?.id, baseline: physicalGovernanceBaseline(report) });
+    setFoundationOpen(true);
     setHighlightRowKey(result.value);
-    editorRootRef.current?.querySelector(`tr[data-row-key="${result.value}"]`)
-      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // The per-layer technical editor may be collapsed; locate only after it mounts.
+    window.setTimeout(() => {
+      editorRootRef.current?.querySelector(`tr[data-row-key="${result.value}"]`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
     clearTimeout(highlightTimerRef.current);
     highlightTimerRef.current = setTimeout(() => setHighlightRowKey(undefined), 2500);
     message.info('已定位当前物理列；请自行审查标准引用并保存，原核验报告不会自动修改');
@@ -2289,7 +2297,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
   const approvalPending = publishApproval?.status === 'PENDING';
 
   return (
-    <div className="min-h-[calc(100dvh-64px)] bg-[#f7f8fa] p-6 text-[#242731]">
+    <div className="modeling-studio-editor">
       {coverageFeedback && coverageFeedback.projectId === currentProject?.id
         && coverageFeedback.baseline.modelId === Number(modelId) && (
         <Alert showIcon className="mb-4" type="info"
@@ -2300,160 +2308,94 @@ const emptyColumnDraft = (): ColumnDraft => ({
           action={<Button disabled={dirty || loading || saving || !canAll(['modeling:read'])}
             onClick={() => setStandardCoverageOpen(true)}>修正后重新核验</Button>} />
       )}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {modelInfo?.status ? (
-            <Tag color={modelInfo.status === 'PUBLISHED' ? 'success' : 'default'}>
+      <div className="modeling-studio-editor-head">
+        <div>
+          <span className="modeling-studio-overline">当前模型 / {modelInfo?.layerCode || '物理模型'}</span>
+          <h2>设计编辑与版本发布</h2>
+          <p>保存结构草稿后，再检查映射、标准与发布条件；正式运行和写入不在此执行。</p>
+          <Space wrap size={6} className="!mt-2">
+            {modelInfo?.status ? <Tag color={modelInfo.status === 'PUBLISHED' ? 'success' : 'default'}>
               {modelInfo.status === 'PUBLISHED' ? '已发布' : modelInfo.status === 'DRAFT' ? '草稿' : modelInfo.status}
-            </Tag>
-          ) : null}
-          {modelInfo?.latestVersionNo ? (
-            <span className="text-[12px] text-[#667085]">V{modelInfo.latestVersionNo}</span>
-          ) : null}
-          {publishApproval ? (
-            <Tooltip
-              title={
-                approvalPending
-                  ? '批准后按当时最新保存结构自动发布；在途期间结构编辑与发布已冻结'
-                  : `最近一次发布审批：${publishApproval.title}`
-              }
-            >
-              <span className="flex items-center gap-1">
-                <ApprovalStatusTag status={publishApproval.status} />
-                <Button
-                  type="link"
-                  size="small"
-                  className="!px-0 !text-[12px]"
-                  onClick={() => history.push(`/approval/instance/${publishApproval.id}`)}
-                >
-                  查看审批单
-                </Button>
-              </span>
-            </Tooltip>
-          ) : null}
+            </Tag> : null}
+            {modelInfo?.latestVersionNo ? <Tag>最新版本 V{modelInfo.latestVersionNo}</Tag> : null}
+            {dirty ? <Tag color="warning">有未保存的结构修改</Tag> : null}
+            {publishApproval ? <>
+              <ApprovalStatusTag status={publishApproval.status} />
+              <Button type="link" size="small" onClick={() => history.push('/approval/instance/' + publishApproval.id)}>
+                查看审批单
+              </Button>
+            </> : null}
+          </Space>
         </div>
-        <div className="flex items-center gap-3">
-          {returnAssetId && Number.isSafeInteger(returnAssetId) && returnAssetId > 0 && (
-            <YakButton
-              className="!h-9 !rounded-lg !px-4"
-              onClick={() => history.push(`/data-asset/detail/${returnAssetId}`)}
-            >
-              返回资产详情
-            </YakButton>
-          )}
-          {modelInfo?.layerCode?.toUpperCase() === 'ODS'
-            && modelInfo.sourceDatasourceId && modelInfo.sourceDatabase && modelInfo.sourceTable && (
-            <YakButton className="!h-9 !rounded-lg !px-4"
-              onClick={() => {
-                const qs = new URLSearchParams({
-                  view: 'entity',
-                  datasourceId: String(modelInfo.sourceDatasourceId),
-                  databaseName: modelInfo.sourceDatabase || '',
-                });
-                const target = `/data-asset/catalog?${qs.toString()}`;
-                if (dirty) {
-                  Modal.confirm({
-                    title: '物理模型还有未保存的改动',
-                    content: '离开会放弃当前未保存编辑；保存模型后才可从新页面恢复结构与映射。',
-                    okText: '放弃未保存改动并返回', okType: 'danger',
-                    cancelText: '继续编辑', onOk: () => history.push(target),
-                  });
-                  return;
-                }
-                history.push(target);
-              }}>返回来源物理表目录</YakButton>
-          )}
-          {modelInfo?.layerCode?.toUpperCase() === 'ODS'
-            && Number(modelInfo.latestVersionNo) > 0 && (
-            <YakButton className="!h-9 !rounded-lg !px-4"
-              disabled={!canAll(['modeling:read', 'resource:data-source:read'])}
-              onClick={() => setOdsVersionEvidenceOpen(true)}>
-              核对 ODS 发布版本证据
-            </YakButton>
-          )}
-          {modelInfo?.layerCode?.toUpperCase() === 'DWD'
-            && Number(modelInfo?.latestVersionNo) > 0 && (
-            <YakButton className="!h-9 !rounded-lg !px-4"
-              disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
-              onClick={() => setDwdHistoryOpen(true)}>
-              DWD 设计版本与映射历史
-            </YakButton>
-          )}
-          {modelInfo?.layerCode?.toUpperCase() === 'ODS' && (
-            <YakButton className="!h-9 !rounded-lg !px-4"
-              disabled={!modelId || dirty || loading || !canAll(['modeling:read', 'resource:data-source:read'])}
-              onClick={() => setOdsPhysicalDeliveryOpen(true)}>
-              目标库核验与离线同步
-            </YakButton>
-          )}
-          {modelInfo?.layerCode?.toUpperCase() === 'DWD'
-            && Number(modelInfo?.latestVersionNo) > 0 && (
-              <YakButton className="!h-9 !rounded-lg !px-4"
-                disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
-                onClick={() => setDwdHistoryOpen(true)}>
-                DWD 设计版本与映射历史
-              </YakButton>
-          )}
-          {['DWD', 'DIM', 'DWS', 'ADS'].includes(modelInfo?.layerCode?.toUpperCase() || '') && (
-            <Tooltip title={dirty
-              ? '请先保存当前物理结构；核验只读取服务端已保存版本'
-              : '只读核验当前字段的标准引用；不代替 DWS/ADS 分层专项合同，也不会改变发布资格'}>
-              <YakButton className="!h-9 !rounded-lg !px-4"
-                disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
-                onClick={() => setStandardCoverageOpen(true)}>
-                核验标准覆盖
-              </YakButton>
-            </Tooltip>
-          )}
-          {['DWD', 'DIM'].includes(modelInfo?.layerCode?.toUpperCase() || '')
-            && Number(modelInfo?.latestVersionNo) > 0 && (
-            <YakButton className="!h-9 !rounded-lg !px-4"
-              disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
-              onClick={() => setDataDevHandoffOpen(true)}>
-              DataDev 交接预检
-            </YakButton>
-          )}
-          <YakButton className="!h-9 !rounded-lg !px-4" onClick={() => void handleGenerateDdl()}>
-            建库脚本
+        <div className="modeling-studio-editor-main-actions">
+          {publishFlowEnabled ? <YakButton
+            disabled={loading || !structure || approvalPending}
+            loading={approvalSubmitting}
+            onClick={() => void handleSubmitPublishApproval()}>
+            提交发布审批
+          </YakButton> : <YakButton
+            disabled={loading || !structure || approvalPending} loading={publishing}
+            onClick={() => void handlePublish()}>发布设计</YakButton>}
+          <YakButton type="primary" loading={saving}
+            disabled={loading || !dirty || approvalPending}
+            onClick={() => void handleSave()}>
+            保存表结构
           </YakButton>
-          {publishFlowEnabled ? (
-            <Tooltip title={approvalPending ? '已有在途发布审批单，禁止重复提交' : undefined}>
-              <YakButton
-                className="!h-9 !rounded-lg !px-4"
-                disabled={loading || !structure || approvalPending}
-                loading={approvalSubmitting}
-                onClick={() => void handleSubmitPublishApproval()}
-              >
-                提交发布审批
-              </YakButton>
-            </Tooltip>
-          ) : null}
-          <Tooltip title={approvalPending ? '发布审批在途，需待终态后发布' : undefined}>
-            <YakButton
-              className="!h-9 !rounded-lg !px-4"
-              disabled={loading || !structure || approvalPending}
-              onClick={() => void handlePublish()}
-              loading={publishing}
-            >
-              {publishFlowEnabled ? '直接发布' : '发布'}
-            </YakButton>
-          </Tooltip>
-          {modelInfo?.layerCode === 'DWD' && <Tooltip title={dirty ? '请先保存表结构，再交接指标设计' : '目标页将重新读取模型与业务过程'}>
-            <YakButton disabled={loading || saving || dirty || !structure || !canAll(['metric:create', 'modeling:read'])}
-              onClick={() => history.push(`/metric/manage?sourceModelId=${encodeURIComponent(String(modelId))}`)}>继续设计指标</YakButton>
-          </Tooltip>}
-          <Tooltip title={approvalPending ? '发布审批在途，结构已冻结至终态' : undefined}>
-            <YakButton
-              type="primary"
-              className="!h-9 !rounded-lg !px-5 !text-white"
-              loading={saving}
-              disabled={loading || dirty === false || approvalPending}
-              onClick={() => void handleSave()}
-            >
-              保存表结构
-            </YakButton>
-          </Tooltip>
         </div>
+      </div>
+      <div className="modeling-studio-editor-tools">
+        <span>与当前对象有关的操作</span>
+        {modelInfo?.layerCode?.toUpperCase() === 'ODS' && modelInfo.sourceDatasourceId
+          && modelInfo.sourceDatabase && modelInfo.sourceTable ? (
+          <YakButton onClick={() => {
+            const qs = new URLSearchParams({ view: 'entity', datasourceId: String(modelInfo.sourceDatasourceId),
+              databaseName: modelInfo.sourceDatabase || '' });
+            const path = '/data-asset/catalog?' + qs.toString();
+            if (dirty) {
+              Modal.confirm({ title: '物理模型还有未保存的改动',
+                content: '离开会放弃当前未保存编辑。请先保存，或明确放弃后返回。',
+                okText: '放弃改动并返回', okType: 'danger', cancelText: '继续编辑',
+                onOk: () => history.push(path) });
+            } else history.push(path);
+          }}>返回来源表</YakButton>
+        ) : null}
+        {modelInfo?.layerCode?.toUpperCase() === 'ODS' && Number(modelInfo.latestVersionNo) > 0 ? (
+          <YakButton disabled={!modelId || dirty || loading || !canAll(['modeling:read','resource:data-source:read'])}
+            onClick={() => setOdsVersionEvidenceOpen(true)}>ODS 来源版本证据</YakButton>
+        ) : null}
+        {modelInfo?.layerCode?.toUpperCase() === 'DWD' && Number(modelInfo.latestVersionNo) > 0 ? (
+          <YakButton disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
+            onClick={() => setDwdHistoryOpen(true)}>DWD 映射历史</YakButton>
+        ) : null}
+        {['DWD','DIM','DWS','ADS'].includes(modelInfo?.layerCode?.toUpperCase() || '') ? (
+          <YakButton disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
+            onClick={() => setStandardCoverageOpen(true)}>标准覆盖核验</YakButton>
+        ) : null}
+        <details className="modeling-studio-more">
+          <summary>更多专业操作</summary>
+          <div className="modeling-studio-more-actions">
+            {returnAssetId && Number.isSafeInteger(returnAssetId) && returnAssetId > 0 ? (
+              <Button onClick={() => history.push('/data-asset/detail/' + returnAssetId)}>返回资产详情</Button>
+            ) : null}
+            {modelInfo?.layerCode?.toUpperCase() === 'ODS' ? (
+              <Button disabled={!modelId || dirty || loading || !canAll(['modeling:read','resource:data-source:read'])}
+                onClick={() => setOdsPhysicalDeliveryOpen(true)}>目标库核验与离线同步</Button>
+            ) : null}
+            {['DWD','DIM'].includes(modelInfo?.layerCode?.toUpperCase() || '')
+              && Number(modelInfo?.latestVersionNo) > 0 ? (
+              <Button disabled={!modelId || dirty || loading || !canAll(['modeling:read'])}
+                onClick={() => setDataDevHandoffOpen(true)}>DataDev 交接预检</Button>
+            ) : null}
+            <Button onClick={() => void handleGenerateDdl()}>生成建库脚本</Button>
+            {publishFlowEnabled ? <Button disabled={loading || !structure || approvalPending}
+              onClick={() => void handlePublish()} loading={publishing}>直接发布（按原有权限）</Button> : null}
+            {modelInfo?.layerCode === 'DWD' ? <Button
+              disabled={loading || saving || dirty || !structure || !canAll(['metric:create', 'modeling:read'])}
+              onClick={() => history.push('/metric/manage?sourceModelId=' + encodeURIComponent(String(modelId)))}>
+              继续设计指标
+            </Button> : null}
+          </div>
+        </details>
       </div>
 
       {loading && !structure ? null : !structure ? (
@@ -2462,6 +2404,58 @@ const emptyColumnDraft = (): ColumnDraft => ({
         </Card>
       ) : (
         <div className="space-y-4">
+          <div className="modeling-studio-layer-intro">
+            <strong>{modelInfo?.layerCode || '物理'} · 当前模型设计任务</strong>
+            <p>{({
+              ODS: '来源核验 → ODS 物理结构 → 保存并返回来源；资产治理独立进行。',
+              DWD: '逻辑冻结版本 → 明细粒度与字段标准 → 人工映射、冻结及设计发布。',
+              DIM: '明确维度业务键、属性标准与物理版本；不通过字段同名推断业务关系。',
+              DWS: '先完成下方汇总模型六步业务设计；物理表结构作为独立编辑区按需展开。',
+              ADS: '先完成下方应用输出六步工作流；物理表结构作为独立编辑区按需展开。',
+            } as Record<string, string>)[(modelInfo?.layerCode || '').toUpperCase()] ||
+              '先核对业务定义和目标，再编辑物理字段、映射与版本。'}</p>
+          </div>
+          <div className="modeling-studio-specialized">
+          {modelInfo?.layerCode === 'DWS' && modelId ? (
+            <DwsGrainDesignPanel
+              key={`${currentProject?.id ?? 'none'}:${modelId}`}
+              modelId={Number(modelId)}
+              structure={structure}
+              dirty={dirty}
+              modelName={modelInfo.name}
+              modelCode={modelInfo.code}
+              processName={modelInfo.processName}
+              latestVersionNo={modelInfo.latestVersionNo}
+              canEdit={canAll(['modeling:update'])}
+              onRequestPublish={() => {
+                if (publishFlowEnabled) void handleSubmitPublishApproval();
+                else void handlePublish();
+              }}
+            />
+          ) : null}
+
+          {modelInfo?.layerCode === 'ADS' && modelId ? (
+            <AdsApplicationDesignPanel
+              key={String(currentProject?.id ?? 'none') + ':' + modelId}
+              modelId={Number(modelId)}
+              structure={structure}
+              structureDirty={dirty}
+              modelName={modelInfo.name}
+              modelCode={modelInfo.code}
+              processId={modelInfo.processId}
+              canEdit={canAll(['modeling:update'])}
+            />
+          ) : null}
+
+          </div>
+          <section className="modeling-studio-foundation" aria-label="物理表结构设计">
+            <button type="button" className="modeling-studio-foundation-head !w-full !text-left"
+              aria-expanded={foundationOpen} onClick={() => setFoundationOpen(value => !value)}>
+              <span><strong>物理表结构与技术属性</strong>
+                <small className="!ml-3 !text-[#728199]">字段、主键、分区、索引和表属性均保留原有服务端保存能力</small></span>
+              <strong>{foundationOpen ? '收起' : '展开编辑'}</strong>
+            </button>
+            {foundationOpen ? <div className="space-y-4">
           <Card
             bordered={false}
             title="表基础信息"
@@ -2498,37 +2492,6 @@ const emptyColumnDraft = (): ColumnDraft => ({
               </label>
             </div>
           </Card>
-
-          {modelInfo?.layerCode === 'DWS' && modelId ? (
-            <DwsGrainDesignPanel
-              key={`${currentProject?.id ?? 'none'}:${modelId}`}
-              modelId={Number(modelId)}
-              structure={structure}
-              dirty={dirty}
-              modelName={modelInfo.name}
-              modelCode={modelInfo.code}
-              processName={modelInfo.processName}
-              latestVersionNo={modelInfo.latestVersionNo}
-              canEdit={canAll(['modeling:update'])}
-              onRequestPublish={() => {
-                if (publishFlowEnabled) void handleSubmitPublishApproval();
-                else void handlePublish();
-              }}
-            />
-          ) : null}
-
-          {modelInfo?.layerCode === 'ADS' && modelId ? (
-            <AdsApplicationDesignPanel
-              key={String(currentProject?.id ?? 'none') + ':' + modelId}
-              modelId={Number(modelId)}
-              structure={structure}
-              structureDirty={dirty}
-              modelName={modelInfo.name}
-              modelCode={modelInfo.code}
-              processId={modelInfo.processId}
-              canEdit={canAll(['modeling:update'])}
-            />
-          ) : null}
 
           {validationIssues.length ? (
             <Card
@@ -3256,6 +3219,8 @@ const emptyColumnDraft = (): ColumnDraft => ({
               </div>
             )}
           </Card>
+            </div> : null}
+          </section>
         </div>
       )}
       {modelId && dataDevHandoffOpen && (
@@ -3282,10 +3247,7 @@ const emptyColumnDraft = (): ColumnDraft => ({
           open={odsPhysicalDeliveryOpen} model={modelInfo}
           onClose={() => setOdsPhysicalDeliveryOpen(false)} />
       )}
-      {modelId && dwdHistoryOpen && (
-        <DwdPublishedMappingHistoryPanel open={dwdHistoryOpen}
-          modelId={Number(modelId)} onClose={() => setDwdHistoryOpen(false)} />
-      )}
+
       {modelId && odsVersionEvidenceOpen && (
         <OdsPublishedVersionEvidencePanel
           open={odsVersionEvidenceOpen} modelId={Number(modelId)}

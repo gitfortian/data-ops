@@ -7,6 +7,7 @@ import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { matchesSavedDwdMapping, restoreSavedDwdMapping } from './dwdMappingReview';
 import DwdStandardReviewCard from './components/DwdStandardReviewCard';
+import ModelingStudioHeader from './components/ModelingStudioHeader';
 import { deriveManualJourney, MANUAL_JOURNEY_LABELS } from './manualModelingJourney';
 import { getDwdMappingDraft, saveDwdMappingDraft, freezeDwdMappingDraft,
   publishDwdWithMapping, getPublishedDwdMapping,
@@ -775,13 +776,15 @@ export default function LogicalWorkspace() {
       ? compareLogicalGovernance(reviewFeedback.baseline, semanticReview) : undefined;
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-6">
-      <Space className="mb-4" wrap>
-        <Button onClick={() => history.push(
-          journeyProcess ? processToPhysical(journeyProcess.id) : '/modeling',
-        )}>返回物理模型工作台</Button>
-        <Typography.Title level={4} className="!mb-0">业务逻辑模型</Typography.Title>
-      </Space>
+    <div className="modeling-studio-page modeling-studio-logical">
+      <ModelingStudioHeader area="logical" title="业务逻辑设计工作台"
+        description="把业务过程、实体与关系建成可冻结的逻辑设计，再逐列核对物理目标。逻辑快照、映射冻结与正式发布有各自的事实和回执。"
+        context={<>
+          {journeyProcess ? <span>业务过程：{journeyProcess.name} · {journeyProcess.grain || '粒度待确认'}</span> : <span>当前项目逻辑模型</span>}
+          {detail ? <span>草稿：{detail.model.name} · 修订 {detail.model.draftRevision}</span> : null}
+        </>}
+        actions={<Button onClick={() => history.push(journeyProcess
+          ? processToPhysical(journeyProcess.id) : '/modeling')}>返回物理模型</Button>} />
       {journeyProblem && <Alert className="mb-4" showIcon type="error"
         message="无法使用所请求的业务过程上下文" description={journeyProblem}
         action={<Button onClick={() => history.push('/semantic/processes')}>重新选择业务过程</Button>} />}
@@ -833,19 +836,20 @@ export default function LogicalWorkspace() {
           刷新后若缺少发布回执，需重新核对历史。此导航不代替正式标准发布门禁，也不执行加工任务。
         </Typography.Text>
       </Card>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <Card id="manual-modeling-pick" title={journeyProcess ? '该业务过程的逻辑草稿' : '项目逻辑模型'}
+      <div className="modeling-studio-logical-board grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <Card className="modeling-studio-logical-selector" id="manual-modeling-pick" title={journeyProcess ? '该业务过程的逻辑草稿' : '项目逻辑模型'}
           extra={<Button type="primary" disabled={Boolean(journeyProblem) || loading}
             onClick={openCreate}>新建草稿</Button>}>
           {models.length === 0 ? <Empty description={journeyProcess
             ? '该业务过程尚无逻辑草稿，可创建第一份草稿' : '尚无逻辑模型，选择业务过程开始'} /> : (
             <div className="flex flex-col gap-2">
               {models.map((model) => (
-                <Button key={model.id} block
-                  type={model.id === selected ? 'primary' : 'default'}
+                <button key={model.id} type="button"
+                  className={'modeling-studio-logical-choice' + (model.id === selected ? ' is-active' : '')}
+                  aria-pressed={model.id === selected}
                   onClick={() => void selectModel(model.id)}>
-                  {model.name} · {model.code}
-                </Button>
+                  <strong>{model.name}</strong><span>{model.code} · 逻辑设计草稿</span>
+                </button>
               ))}
             </div>
           )}
