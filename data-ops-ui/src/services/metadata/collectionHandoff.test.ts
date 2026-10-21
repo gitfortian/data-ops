@@ -86,7 +86,7 @@ it('carries only a complete verified origin from the saved task into detail and 
   const hint = readCollectTaskOrigin(new URL(detailPath, 'http://localhost').searchParams);
   expect(hint).toEqual(scope);
   const back = verifiedCollectTaskReturnPath(saved, hint);
-  expect(back?.startsWith('/data-source?')).toBe(true);
+  expect(back?.startsWith('/data-source/explore?')).toBe(true);
   const q = new URL(back!, 'http://localhost').searchParams;
   expect(q.get('sourceId')).toBe('18');
   expect(q.get('database')).toBe('trade_db');
