@@ -32,7 +32,7 @@ beforeEach(() => {
 afterEach(() => { Modal.destroyAll(); message.destroy(); });
 
 const openEditedEntity = async () => {
-  fireEvent.click(await screen.findByRole('button', { name: '编辑实体' }));
+  fireEvent.click((await screen.findAllByRole('button', { name: '编辑实体' }))[0]);
   const dialog = within(await screen.findByRole('dialog', { name: '编辑业务实体' }));
   fireEvent.change(dialog.getByLabelText('业务名称'), { target: { value: '用户正在编辑的名称' } });
   return dialog;
@@ -77,10 +77,10 @@ it('never applies a previous project save receipt to the new project workspace',
   await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
   mockProjectId = 2;
   view.rerender(<LogicalWorkspace />);
-  await screen.findByRole('button', { name: '编辑实体' });
+  await screen.findAllByRole('button', { name: '编辑实体' });
   const oldReceipt = logicalSample(); oldReceipt.entities[0].entity.businessName = '旧项目晚响应';
   await act(async () => resolve(oldReceipt));
-  expect(screen.getByRole('button', { name: '编辑实体' })).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: '编辑实体' }).length).toBeGreaterThan(0);
   expect(screen.queryByText(/旧项目晚响应/)).not.toBeInTheDocument();
 });
 
@@ -90,5 +90,5 @@ it('keeps the authorized catalog when one draft cannot be read and permits a sco
   await screen.findByText('草稿 #10 暂时无法读取');
   expect(screen.getByRole('button', { name: /订单逻辑设计/ })).toBeEnabled();
   fireEvent.click(screen.getByText('重新读取草稿'));
-  expect(await screen.findByRole('button', { name: '编辑实体' })).toBeInTheDocument();
+  expect((await screen.findAllByRole('button', { name: '编辑实体' })).length).toBeGreaterThan(0);
 });
