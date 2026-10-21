@@ -3,28 +3,29 @@ import {
   getMainNavigationGroups, getRouteMetadata,
 } from './navigation';
 import { getModelingNavigationItem, MODELING_NAVIGATION_ITEMS } from './modelingNavigation';
-import { getActiveContextNavigationId, getContextNavigationLinks, getContextNavigationModel } from './taskNavigation';
+import { getContextNavigationModel } from './taskNavigation';
 
-const modelingLinks = (permissions: string[], menus: string[]) => {
+const modelingRoutes = (permissions: string[], menus: string[]) => {
   const group = getMainNavigationGroups(permissions, menus).find(item => item.id === 'modeling');
-  return group ? getContextNavigationModel(group).sections.flatMap(getContextNavigationLinks) : [];
+  return group ? getContextNavigationModel(group).sections.flatMap(section => section.routes) : [];
 };
 
-it('projects five existing destinations from the one granted Modeling menu without inventing menu codes', () => {
+it('keeps five modeling destinations within one authorized workspace menu', () => {
   const permissions = ['modeling:read'];
   const menus = ['modeling-workspace'];
-  const links = modelingLinks(permissions, menus);
-  expect(links.map(item => item.title)).toEqual(['建模总览', '逻辑模型', '物理模型', '过程覆盖', '变更影响']);
-  expect(new Set(links.map(item => item.id)).size).toBe(5);
-  for (const link of links) {
-    expect(link.ownerRouteId).toBe('modeling-workspace');
-    const destination = getRouteMetadata(link.path);
-    expect(destination).toBeDefined();
-    expect(canAccessNavigationRoute(destination!, permissions, menus)).toBe(true);
-    expect(getActiveContextNavigationId(
-      getActiveNavigationId(link.path, permissions, menus),
-      link.path.split('?')[0], link.path.includes('?') ? link.path.slice(link.path.indexOf('?')) : '',
-    )).toBe(link.id);
+  const routes = modelingRoutes(permissions, menus);
+  expect(routes.filter(item => item.id === 'modeling-workspace')).toHaveLength(1);
+  expect(MODELING_NAVIGATION_ITEMS.map(item => item.title))
+    .toEqual(['建模总览', '逻辑模型', '物理模型', '过程覆盖', '变更影响']);
+  expect(new Set(MODELING_NAVIGATION_ITEMS.map(item => item.id)).size).toBe(5);
+  for (const link of MODELING_NAVIGATION_ITEMS) {
+    const pathname = link.path.split('?')[0];
+    const search = link.path.includes('?') ? link.path.slice(link.path.indexOf('?')) : '';
+    expect(getModelingNavigationItem(pathname, search)?.id).toBe(link.id);
+    const ownerRoute = getRouteMetadata(link.path);
+    expect(ownerRoute).toBeDefined();
+    expect(canAccessNavigationRoute(ownerRoute!, permissions, menus)).toBe(true);
+    expect(getActiveNavigationId(link.path, permissions, menus)).toBe('modeling-workspace');
   }
   expect(appRoutes.filter(route => route.id === 'modeling-workspace')).toHaveLength(1);
 });
@@ -33,11 +34,10 @@ it.each([
   [[], ['modeling-workspace']],
   [['modeling:read'], []],
   [['semantic:read'], ['semantic-standards']],
-])('does not expose modeling shortcuts without both the original menu and permission', (permissions, menus) => {
-  expect(modelingLinks(permissions, menus).some(link => link.ownerRouteId === 'modeling-workspace')).toBe(false);
+])('does not expose a Modeling entry without owner menu and permission', (permissions, menus) => {
+  expect(modelingRoutes(permissions, menus).some(link => link.id === 'modeling-workspace')).toBe(false);
   for (const link of MODELING_NAVIGATION_ITEMS) {
-    const owner = getActiveNavigationId(link.path, permissions, menus);
-    expect(getActiveContextNavigationId(owner, link.path.split('?')[0])).toBeUndefined();
+    expect(getActiveNavigationId(link.path, permissions, menus)).not.toBe('modeling-workspace');
   }
 });
 
@@ -53,14 +53,15 @@ it.each([
   ['/modeling/models/701/layer-mapping', '', 'modeling-physical'],
   ['/modeling/mainline', '?processId=7', 'modeling-coverage'],
   ['/modeling/impact', '?processId=7', 'modeling-impact'],
-])('keeps %s %s in its exact task, including existing deep links', (pathname, search, id) => {
+])('classifies authorized workspace location %s %s without adding a new menu', (pathname, search, id) => {
   expect(getModelingNavigationItem(pathname, search)?.id).toBe(id);
-  expect(getActiveContextNavigationId('modeling-workspace', pathname, search)).toBe(id);
+  expect(getActiveNavigationId(pathname+search, ['modeling:read'], ['modeling-workspace']))
+    .toBe('modeling-workspace');
 });
 
-it('does not reclassify another authorized domain or unknown URLs', () => {
-  expect(getActiveContextNavigationId('semantic-standards', '/semantic/standards')).toBe('semantic-standards');
+it('does not classify non-modeling or unknown paths as modeling tasks', () => {
+  expect(getModelingNavigationItem('/semantic/standards')).toBeUndefined();
   expect(getModelingNavigationItem('/modeling-other')).toBeUndefined();
   expect(getModelingNavigationItem('/modeling/models/701/unknown')).toBeUndefined();
-  expect(getActiveContextNavigationId(undefined, '/modeling/logical')).toBeUndefined();
+  expect(getActiveNavigationId('/modeling/logical', [], ['modeling-workspace'])).not.toBe('modeling-workspace');
 });
