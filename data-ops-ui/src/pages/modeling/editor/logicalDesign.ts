@@ -1,4 +1,5 @@
-import type { LogicalDraftDetail, LogicalId, LogicalRelation } from '@/services/modeling/logical';
+import type { LogicalDraftDetail, LogicalRelation } from '@/services/modeling/logical';
+import type { LogicalId } from '@/services/modeling/logicalIdentity';
 
 export const LOGICAL_CANVAS_LIMIT = 40;
 export const LOGICAL_CARD_ATTRIBUTE_LIMIT = 5;
@@ -14,10 +15,10 @@ export const logicalEntityLabel = (entity: LogicalDraftDetail['entities'][number
 
 /** A view projection of the selected draft, never a semantic role or lineage inference. */
 export function logicalDesignView(detail: LogicalDraftDetail, focusId?: LogicalId) {
-  const allIds = new Set(detail.entities.map(item => item.entity.id));
+  const allIds = new Set<LogicalId>(detail.entities.map(item => item.entity.id));
   const unresolved = detail.relations.filter(item => !allIds.has(item.sourceEntityId) || !allIds.has(item.targetEntityId));
   const connected = detail.relations.filter(item => allIds.has(item.sourceEntityId) && allIds.has(item.targetEntityId));
-  const ids = focusId !== undefined && allIds.has(focusId) ? new Set([focusId]) : allIds;
+  const ids = focusId !== undefined && allIds.has(focusId) ? new Set<LogicalId>([focusId]) : allIds;
   if (ids !== allIds) for (const relation of connected) {
     if (relation.sourceEntityId === focusId || relation.targetEntityId === focusId) {
       ids.add(relation.sourceEntityId); ids.add(relation.targetEntityId);

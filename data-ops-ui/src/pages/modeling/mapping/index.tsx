@@ -33,12 +33,24 @@ interface MappingFormValues {
 
 import { history, useParams } from '@umijs/max';
 import type { TableColumnsType } from 'antd';
-import { Button, Form, Input, Modal, message, Segmented, Select, Space, Table, Tag, Typography } from 'antd';
+import { Alert, Button, Dropdown, Form, Input, Modal, message, Segmented, Select, Space, Table, Tag, Typography } from 'antd';
 import type { TextAreaRef } from 'antd/es/input/TextArea';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './index.less';
 
 type MappingMode = 'SOURCE' | 'EXPRESSION';
+
+export interface MappingEditorStatus { loading: boolean; saving: boolean; dirty: boolean; }
+interface MappingPanelProps {
+  layerCode?: string;
+  onEditorStateChange?: (state: MappingEditorStatus) => void;
+}
+const mappingEditorSnapshot = (mode: MappingMode, values: MappingFormValues = {}) => JSON.stringify({
+  mode, sourceDatasourceId: values.sourceDatasourceId ?? null,
+  sourceDatabase: values.sourceDatabase ?? '', sourceTable: values.sourceTable ?? '',
+  sourceColumn: values.sourceColumn ?? '', transformExpr: values.transformExpr ?? '',
+  businessDescription: values.businessDescription ?? '',
+});
 
 /** 常用转换函数提示(19)。 */
 const COMMON_FUNCTIONS = [
@@ -67,7 +79,7 @@ const isExpressionMapping = (mapping: ModelingMappingView) => mapping.mapped
   && mapping.sourceDatasourceId == null && !mapping.sourceDatabase && !mapping.sourceSchema
   && !mapping.sourceTable && !mapping.sourceColumn && Boolean(mapping.transformExpr?.trim());
 
-const MappingPanel: React.FC = () => {
+const MappingPanel: React.FC<MappingPanelProps> = ({ layerCode, onEditorStateChange }) => {
   const params = useParams<{ id?: string }>();
   const modelId = params.id;
   const { currentProject } = useSecurityProject();
@@ -77,10 +89,22 @@ const MappingPanel: React.FC = () => {
   const openOperation = useLatestOperation(scope);
   const tablesOperation = useLatestOperation(scope);
   const columnsOperation = useLatestOperation(scope);
+  const datasourceOperation = useLatestOperation(scope);
   const [definition, setDefinition] = useState('');
   const [editorLoading, setEditorLoading] = useState(false);
   const [structure, setStructure] = useState<StructureRecordLite>();
   const [modelRecord, setModelRecord] = useState<ModelingModelRecord>();
+  const isDwd = (modelRecord?.layerCode || layerCode)?.toUpperCase() === 'DWD';
+  const [loadProblem, setLoadProblem] = useState<string>();
+  const [editorProblem, setEditorProblem] = useState<string>();
+  const [datasourceProblem, setDatasourceProblem] = useState<string>();
+  const [datasourceLoading, setDatasourceLoading] = useState(false);
+  const [tablesProblem, setTablesProblem] = useState<string>();
+  const [columnsProblem, setColumnsProblem] = useState<string>();
+  const [tablesLoading, setTablesLoading] = useState(false);
+  const [columnsLoading, setColumnsLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<'ALL' | 'MAPPED' | 'UNMAPPED'>('ALL');
   const [views, setViews] = useState<ModelingMappingView[]>([]);
   const [loading, setLoading] = useState(false);
   const [datasources, setDatasources] = useState<DataSourceRecord[]>([]);
@@ -95,6 +119,11 @@ const MappingPanel: React.FC = () => {
   const [form] = Form.useForm<MappingFormValues>();
   const expressionRef = useRef<TextAreaRef>(null);
   const [saving, setSaving] = useState(false);
+  const savingRequest = useRef(false);
+  const editEpoch = useRef(0);
+  const editBaseline = useRef('');
+  const [expressionFeedback, setExpressionFeedback] = useState<{ valid: boolean; message: string }>();
+  const [expressionLoading, setExpressionLoading] = useState(false);
   const [odsReview, setOdsReview] = useState<OdsMappingReconcilePreview>();
   const [odsInspection, setOdsInspection] = useState<OdsSourceEvidenceInspection>();
   const [odsInspectionLoading, setOdsInspectionLoading] = useState(false);
@@ -102,6 +131,9 @@ const MappingPanel: React.FC = () => {
   const [odsSaving, setOdsSaving] = useState(false);
   const [odsChoices, setOdsChoices] = useState<Record<string, string>>({});
   const draft = Form.useWatch<MappingFormValues>([], form);
+  const editorSnapshot = mappingEditorSnapshot(mappingMode, form.getFieldsValue(true));
+  const editorDirty = isDwd && Boolean(editTarget) && !editorLoading
+    && Boolean(definition) && editorSnapshot !== editBaseline.current;
   const mayInspectOds = canAll(['modeling:read', 'resource:data-source:read']);
   const mayEdit = canAll(['modeling:read', 'modeling:update']);
   const mayReadSource = canAll(['resource:data-source:read']);
@@ -109,12 +141,24 @@ const MappingPanel: React.FC = () => {
   const maySave = mayEdit && (mappingMode === 'EXPRESSION' || mayReadSource);
   const maySuggest = maySaveSource && canAll(['agent:chat:run', 'agent:session:read']);
 
+  const loadDatasourceCatalog = useCallback(async () => {
+    const current = datasourceOperation();
+    setDatasourceProblem(undefined); setDatasourceLoading(true);
+    try {
+      const result = await listDataSources({ pageNo: 1, pageSize: 200 });
+      if (current()) setDatasources(result.bizData ?? []);
+    } catch (error) {
+      if (current()) { setDatasources([]); setDatasourceProblem(error instanceof Error ? error.message : '数据源读取失败'); }
+    } finally { if (current()) setDatasourceLoading(false); }
+  }, [datasourceOperation]);
+
   const loadAll = useCallback(async () => {
     if (!modelId) {
       return;
     }
     const current = resource();
     setLoading(true);
+    setLoadProblem(undefined);
     try {
       const [structureData, mappingViews, currentModel] = await Promise.all([
         getModelingStructure(modelId),
@@ -125,17 +169,26 @@ const MappingPanel: React.FC = () => {
       setStructure(structureData as StructureRecordLite);
       setViews(mappingViews ?? []);
       setModelRecord(currentModel);
-    } catch {
-      if (current()) message.error('加载来源映射失败，请稍后重试');
+    } catch (error) {
+      if (current()) {
+        const reason = error instanceof Error ? error.message : '加载来源映射失败，请稍后重试';
+        setLoadProblem(reason);
+        message.error(reason);
+      }
     } finally {
       if (current()) setLoading(false);
     }
   }, [modelId, resource]);
 
   useEffect(() => {
-    let active = true;
-    const current = resource();
+    datasourceOperation();
     openOperation(); tablesOperation(); columnsOperation();
+    editEpoch.current += 1; savingRequest.current = false;
+    editBaseline.current = '';
+    setEditorProblem(undefined); setLoadProblem(undefined);
+    setDatasourceProblem(undefined); setDatasourceLoading(false); setTablesProblem(undefined); setColumnsProblem(undefined);
+    setTablesLoading(false); setColumnsLoading(false);
+    setExpressionFeedback(undefined); setExpressionLoading(false); setSearch(''); setFilter('ALL');
     setEditTarget(null); setDefinition(''); setSaving(false); setEditorLoading(false);
     setMappingMode(mayReadSource ? 'SOURCE' : 'EXPRESSION'); setAiExpanded(false);
     setViews([]); setStructure(undefined); setModelRecord(undefined); setDatasources([]); setSourceTables([]); setSourceColumns([]);
@@ -145,29 +198,45 @@ const MappingPanel: React.FC = () => {
     form.resetFields();
     void loadAll();
     if (mayReadSource) {
-      listDataSources({ pageNo: 1, pageSize: 200 })
-        .then(result => { if (active && current()) setDatasources(result.bizData ?? []); })
-        .catch(() => { if (active && current()) setDatasources([]); });
+      void loadDatasourceCatalog();
     }
-    return () => { active = false; };
-  }, [loadAll, resource, form, mayReadSource, openOperation, tablesOperation, columnsOperation]);
+    return () => { datasourceOperation(); };
+  }, [loadAll, resource, form, mayReadSource, openOperation, tablesOperation, columnsOperation, loadDatasourceCatalog, datasourceOperation]);
+
+  useEffect(() => {
+    if (!isDwd) return;
+    onEditorStateChange?.({ loading: Boolean(editTarget) && editorLoading, saving, dirty: editorDirty });
+  }, [isDwd, Boolean(editTarget), editorLoading, saving, editorDirty, onEditorStateChange]);
+
+  useEffect(() => () => {
+    onEditorStateChange?.({ loading: false, saving: false, dirty: false });
+  }, [onEditorStateChange]);
+
+  useEffect(() => { setExpressionFeedback(undefined); }, [draft?.transformExpr]);
 
   const loadSourceTables = useCallback(async (targetDatasourceId?: number) => {
     const current = tablesOperation();
+    setTablesProblem(undefined);
     if (!targetDatasourceId) {
       setSourceTables([]);
+      setTablesLoading(false);
       return;
     }
+    setTablesLoading(true);
     try {
       const list = await listModelingImportTables(targetDatasourceId, undefined);
       if (current()) setSourceTables(list ?? []);
-    } catch {
-      if (current()) setSourceTables([]);
-    }
+    } catch (error) {
+      if (current()) {
+        setSourceTables([]);
+        setTablesProblem(error instanceof Error ? error.message : '来源库表读取失败');
+      }
+    } finally { if (current()) setTablesLoading(false); }
   }, [tablesOperation]);
 
   const loadSourceColumns = useCallback(async (targetDatasourceId: number, database: string, table: string) => {
     const current = columnsOperation();
+    setColumnsProblem(undefined); setColumnsLoading(true);
     try {
       // A bound ODS must preview the exact persisted source namespace; omitting
       // Schema can silently show same-named columns from a different schema.
@@ -177,14 +246,22 @@ const MappingPanel: React.FC = () => {
         ? modelRecord.sourceSchema ?? undefined : undefined;
       const columns = await previewModelingImportColumns(targetDatasourceId, database, table, boundSchema);
       if (current()) setSourceColumns(columns ?? []);
-    } catch {
-      if (current()) setSourceColumns([]);
-    }
+    } catch (error) {
+      if (current()) {
+        setSourceColumns([]);
+        setColumnsProblem(error instanceof Error ? error.message : '来源字段读取失败');
+      }
+    } finally { if (current()) setColumnsLoading(false); }
   }, [columnsOperation, modelRecord]);
 
   const openEdit = async (view: ModelingMappingView) => {
     if (!modelId || !mayEdit) return;
     const current = openOperation();
+    editEpoch.current += 1;
+    editBaseline.current = '';
+    setEditorProblem(undefined); setExpressionFeedback(undefined); setExpressionLoading(false);
+    setTablesProblem(undefined); setColumnsProblem(undefined);
+    setTablesLoading(false); setColumnsLoading(false);
     tablesOperation(); columnsOperation();
     setAiExpanded(false); setSourceTables([]); setSourceColumns([]);
     setEditTarget(view); setEditorLoading(true); setDefinition(''); form.resetFields();
@@ -198,24 +275,55 @@ const MappingPanel: React.FC = () => {
       const ds = useExpression ? undefined : saved.sourceDatasourceId ?? sourceDatasourceId;
       const db = useExpression ? undefined : saved.sourceDatabase ?? sourceDatabase;
       const table = useExpression ? undefined : saved.sourceTable ?? sourceTable;
-      form.setFieldsValue({ sourceDatasourceId: ds, sourceDatabase: db, sourceTable: table,
-        sourceColumn: saved.sourceColumn, transformExpr: saved.transformExpr, businessDescription: '' });
+      const values = { sourceDatasourceId: ds, sourceDatabase: db, sourceTable: table,
+        sourceColumn: saved.sourceColumn, transformExpr: saved.transformExpr, businessDescription: '' };
+      form.setFieldsValue(values);
+      editBaseline.current = mappingEditorSnapshot(useExpression ? 'EXPRESSION' : 'SOURCE', values);
       setSourceDatasourceId(ds); setSourceDatabase(db); setSourceTable(table);
       if (!useExpression && mayReadSource) {
         void loadSourceTables(ds);
         if (ds && db && table) void loadSourceColumns(ds, db, table);
       }
     } catch (error) {
-      if (current()) message.error(error instanceof Error ? error.message : '无法读取当前映射，请重试');
+      if (current()) {
+        const reason = error instanceof Error ? error.message : '无法读取当前映射，请重试';
+        setEditorProblem(reason); message.error(reason);
+      }
     } finally { if (current()) setEditorLoading(false); }
   };
 
+  const closeEditor = () => {
+    if (savingRequest.current || saving) return;
+    const close = () => {
+      openOperation(); setEditTarget(null);
+      if (isDwd) {
+        editEpoch.current += 1; tablesOperation(); columnsOperation();
+        setTablesLoading(false); setColumnsLoading(false); setExpressionLoading(false);
+      }
+    };
+    if (editorDirty) {
+      Modal.confirm({ title: '放弃未保存的映射？', content: '当前字段映射尚未保存，离开会放弃本次修改。',
+        okText: '放弃修改', cancelText: '继续编辑', onOk: close });
+    } else close();
+  };
+
+  const reloadEditor = () => {
+    if (!editTarget || saving) return;
+    const reread = () => void openEdit(editTarget);
+    if (editorDirty) {
+      Modal.confirm({ title: '重新读取字段映射？', content: '当前未保存的修改将被最新映射替换。',
+        okText: '重新读取', cancelText: '继续编辑', onOk: reread });
+    } else reread();
+  };
+
   const submitMapping = async () => {
-    if (!modelId || !editTarget || !definition || editorLoading || saving || !maySave) {
+    if (!modelId || !editTarget || !definition || editorLoading || saving || !maySave || (isDwd && savingRequest.current)) {
       return;
     }
     const current = resource();
     const mode = mappingMode;
+    savingRequest.current = true;
+    setEditorProblem(undefined);
     setSaving(true);
     try {
       let values: MappingFormValues;
@@ -236,17 +344,21 @@ const MappingPanel: React.FC = () => {
       await setModelingMapping(modelId, editTarget.targetColumn, payload, definition);
       if (!current()) return;
       message.success('映射已保存');
+      if (isDwd) editEpoch.current += 1;
       setEditTarget(null);
       await loadAll();
     } catch (error) {
-      if (current()) message.error(error instanceof Error ? error.message : '保存失败，请重新打开映射后重试');
+      if (current()) {
+        const reason = error instanceof Error ? error.message : '保存失败，请重试';
+        setEditorProblem(reason); message.error(reason);
+      }
     } finally {
-      if (current()) setSaving(false);
+      if (current()) { savingRequest.current = false; setSaving(false); }
     }
   };
 
   const removeMapping = (view: ModelingMappingView) => {
-    if (!modelId) {
+    if (!modelId || (isDwd && !mayEdit)) {
       return;
     }
     Modal.confirm({
@@ -263,7 +375,7 @@ const MappingPanel: React.FC = () => {
   };
 
   const removeAll = () => {
-    if (!modelId) {
+    if (!modelId || (isDwd && !mayEdit)) {
       return;
     }
     Modal.confirm({
@@ -370,14 +482,21 @@ const MappingPanel: React.FC = () => {
     catch { return; }
     const expression = form.getFieldValue('transformExpr');
     const current = resource();
+    const editorRequest = editEpoch.current;
+    if (isDwd) { setExpressionLoading(true); setExpressionFeedback(undefined); }
     try {
       const check = await validateModelingExpression(modelId, expression);
-      if (!current() || form.getFieldValue('transformExpr') !== expression) return;
-      if (check.valid) message.success('表达式基础校验通过');
+      if (!current() || form.getFieldValue('transformExpr') !== expression || (isDwd && editorRequest !== editEpoch.current)) return;
+      if (isDwd) setExpressionFeedback({ valid: check.valid,
+        message: check.valid ? '表达式基础校验通过' : check.message || '表达式不合法' });
+      else if (check.valid) message.success('表达式基础校验通过');
       else message.error(check.message || '表达式不合法');
     } catch {
-      if (current()) message.error('暂时无法校验，请稍后重试');
-    }
+      if (current() && (!isDwd || editorRequest === editEpoch.current)) {
+        if (isDwd) setExpressionFeedback({ valid: false, message: '暂时无法校验，请稍后重试' });
+        else message.error('暂时无法校验，请稍后重试');
+      }
+    } finally { if (current() && editorRequest === editEpoch.current) setExpressionLoading(false); }
   };
 
   const insertFunction = (value: string) => {
@@ -414,7 +533,7 @@ const MappingPanel: React.FC = () => {
             {[record.sourceDatabase, record.sourceSchema, record.sourceTable, record.sourceColumn].filter(Boolean).join('.')}
           </Typography.Text>
         ) : (
-          <Tag color="warning">未映射</Tag>
+          <Tag color={isDwd ? undefined : 'warning'}>未映射</Tag>
         ),
     },
     {
@@ -440,7 +559,7 @@ const MappingPanel: React.FC = () => {
             {record.mapped ? '编辑' : '映射'}
           </Button>
           {record.mapped ? (
-            <Button type="link" size="small" danger onClick={() => removeMapping(record)}>
+            <Button type="link" size="small" danger disabled={isDwd && !mayEdit} onClick={() => removeMapping(record)}>
               清空
             </Button>
           ) : null}
@@ -449,16 +568,30 @@ const MappingPanel: React.FC = () => {
     },
   ];
 
+  const filteredViews = isDwd ? views.filter(view => {
+    const matchesState = filter === 'ALL' || (filter === 'MAPPED' ? view.mapped : !view.mapped);
+    return matchesState && [view.targetColumn, view.sourceDatabase, view.sourceSchema, view.sourceTable,
+      view.sourceColumn, view.transformExpr].filter(Boolean).join(' ').toLowerCase().includes(search.trim().toLowerCase());
+  }) : views;
+  const commonFunctions = <div className="model-mapping-editor__functions">
+    {!isDwd && <span>常用函数</span>}
+    <div>{COMMON_FUNCTIONS.map(func => <button type="button" key={func}
+      disabled={editorLoading || saving || !maySave} onMouseDown={event => event.preventDefault()}
+      onClick={() => insertFunction(func)}>{func.split('(')[0]}</button>)}</div>
+  </div>;
+
   return (
-    <div className="min-h-[calc(100dvh-64px)] bg-white px-6 pb-4 pt-5 text-[#242731] max-md:px-4">
+    <div className={isDwd ? 'dwd-source-mapping' : 'min-h-[calc(100dvh-64px)] bg-white px-6 pb-4 pt-5 text-[#242731] max-md:px-4'}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-[20px] font-semibold leading-7">来源映射</div>
           <div className="mt-1 text-[13px] text-[#667085]">
-            模型 {structure?.modelName || ''}（{structure?.modelCode || '-'}）字段级来源映射；为加工 SQL 与血缘提供输入
+            {isDwd ? `${structure?.modelName || modelRecord?.name || 'DWD 模型'} · ${structure?.modelCode || modelRecord?.code || ''}`
+              : <>模型 {structure?.modelName || ''}（{structure?.modelCode || '-'}）字段级来源映射；为加工 SQL 与血缘提供输入</>}
           </div>
         </div>
-        <Space>
+        <Space wrap>
+          {isDwd && <Button loading={loading} disabled={saving} onClick={() => void loadAll()}>刷新</Button>}
           <Button onClick={() => history.push(`/modeling/models/${modelId}`)}>返回模型</Button>
           {modelRecord?.layerCode?.toUpperCase() === 'ODS' && (
             <Button disabled={!mayInspectOds} loading={odsInspectionLoading}
@@ -470,7 +603,10 @@ const MappingPanel: React.FC = () => {
             <Button disabled={!maySaveSource} loading={odsReviewLoading}
               onClick={() => void loadOdsReview()}>ODS 来源映射批量核验/修复</Button>
           )}
-          <YakButton
+          {isDwd ? <Dropdown menu={{ items: [{ key: 'clear', label: '清空全部映射', danger: true,
+            disabled: !mayEdit || !views.some(view => view.mapped), onClick: removeAll }] }}>
+            <Button>更多操作</Button>
+          </Dropdown> : <YakButton
             className="!h-9 !rounded-lg !px-4"
             danger
             onClick={() => {
@@ -478,20 +614,35 @@ const MappingPanel: React.FC = () => {
             }}
           >
             批量清空
-          </YakButton>
+          </YakButton>}
         </Space>
       </div>
 
-      {views.length === 0 && !loading ? (
-        <YakEmpty compact title="模型还没有字段" description="先在表结构编辑器中添加字段" />
-      ) : (
+      {isDwd && loadProblem && <Alert className="mt-4" type="error" showIcon message="来源映射读取失败"
+        description={loadProblem} action={<Button size="small" onClick={() => void loadAll()}>重新读取</Button>} />}
+      {isDwd && views.length > 0 && <div className="dwd-source-mapping__filters">
+        <Segmented aria-label="映射状态" value={filter} onChange={value => setFilter(value as typeof filter)} options={[
+          { label: `全部 ${views.length}`, value: 'ALL' },
+          { label: `待映射 ${views.filter(view => !view.mapped).length}`, value: 'UNMAPPED' },
+          { label: `已映射 ${views.filter(view => view.mapped).length}`, value: 'MAPPED' },
+        ]} />
+        <Input.Search aria-label="搜索字段映射" placeholder="搜索字段或来源" allowClear
+          value={search} onChange={event => setSearch(event.target.value)} />
+      </div>}
+      {views.length === 0 && !loading && !(isDwd && loadProblem) ? (
+        <YakEmpty compact title="模型还没有字段" description="先在表结构编辑器中添加字段">
+          {isDwd && <Button onClick={() => history.push(`/modeling/models/${modelId}?tab=structure`)}>前往表结构</Button>}
+        </YakEmpty>
+      ) : isDwd && loadProblem && !views.length ? null : (
         <Table<ModelingMappingView>
           className="mt-4"
           rowKey="targetColumn"
           loading={loading}
           columns={columns}
-          dataSource={views}
-          pagination={false}
+          dataSource={filteredViews}
+          scroll={isDwd ? { x: 780 } : undefined}
+          locale={isDwd ? { emptyText: '没有匹配的字段，请调整筛选条件' } : undefined}
+          pagination={isDwd ? { pageSize: 15, hideOnSinglePage: true, showSizeChanger: false } : false}
         />
       )}
 
@@ -620,24 +771,28 @@ const MappingPanel: React.FC = () => {
       </Modal>
       <Modal
         open={Boolean(editTarget)}
-        title="字段映射"
-        className="model-mapping-editor"
+        title={isDwd && editTarget ? `字段映射 · ${editTarget.targetColumn}` : '字段映射'}
+        className={'model-mapping-editor' + (isDwd ? ' model-mapping-editor--dwd' : '')}
         width={680}
-        centered
+        centered={!isDwd}
         okText="保存"
         cancelText="取消"
         confirmLoading={saving}
         okButtonProps={{ disabled: !maySave || !definition || editorLoading }}
         cancelButtonProps={{ disabled: saving }}
         closable={!saving}
-        maskClosable={!saving}
+        maskClosable={isDwd ? false : !saving}
         keyboard={!saving}
         destroyOnClose
-        onCancel={() => { openOperation(); setEditTarget(null); }}
+        onCancel={closeEditor}
         onOk={() => {
           void submitMapping();
         }}
       >
+        {isDwd && editorProblem && <Alert type="error" showIcon className="mb-4"
+          message={definition ? '映射保存失败' : '映射读取失败'} description={editorProblem}
+          action={editTarget ? <Button size="small" onClick={reloadEditor}>{definition ? '重新读取映射' : '重新读取'}</Button> : undefined} />}
+        {isDwd && editorLoading && <Typography.Paragraph type="secondary">正在读取字段映射…</Typography.Paragraph>}
         <div className="model-mapping-editor__target">
           <span>目标字段</span>
           <code>{editTarget?.targetColumn}</code>
@@ -662,8 +817,10 @@ const MappingPanel: React.FC = () => {
                   showSearch
                   optionFilterProp="label"
                   placeholder="选择数据源"
+                  loading={isDwd && datasourceLoading}
                   onChange={(value) => {
                     columnsOperation();
+                    setColumnsProblem(undefined); setColumnsLoading(false);
                     form.setFieldsValue({ sourceDatabase: undefined, sourceTable: undefined, sourceColumn: undefined, transformExpr: undefined });
                     setSourceDatasourceId(value);
                     setSourceDatabase(undefined);
@@ -683,8 +840,10 @@ const MappingPanel: React.FC = () => {
                   showSearch
                   disabled={!sourceDatasourceId || editorLoading || saving || !mayReadSource}
                   placeholder="选择库"
+                  loading={isDwd && tablesLoading}
                   onChange={(value) => {
                     columnsOperation();
+                    setColumnsProblem(undefined); setColumnsLoading(false);
                     form.setFieldsValue({ sourceTable: undefined, sourceColumn: undefined, transformExpr: undefined });
                     setSourceDatabase(value);
                     setSourceTable(undefined);
@@ -701,6 +860,7 @@ const MappingPanel: React.FC = () => {
                   optionFilterProp="label"
                   disabled={!sourceDatabase || editorLoading || saving || !mayReadSource}
                   placeholder="选择源表"
+                  loading={isDwd && tablesLoading}
                   onChange={(value) => {
                     form.setFieldsValue({ sourceColumn: undefined, transformExpr: undefined });
                     setSourceTable(value);
@@ -720,6 +880,7 @@ const MappingPanel: React.FC = () => {
                   optionFilterProp="label"
                   disabled={!sourceTable || editorLoading || saving || !mayReadSource}
                   placeholder="选择字段"
+                  loading={isDwd && columnsLoading}
                   options={sourceColumns.map((column) => ({
                     label: `${column.name}（${column.typeName}）`,
                     value: column.name,
@@ -728,12 +889,22 @@ const MappingPanel: React.FC = () => {
               </Form.Item>
             </div>
           )}
+          {isDwd && mappingMode === 'SOURCE' && datasourceProblem && <Alert type="error" showIcon className="mb-4"
+            message="数据源读取失败" description={datasourceProblem}
+            action={<Button size="small" loading={datasourceLoading} onClick={() => void loadDatasourceCatalog()}>重试数据源</Button>} />}
+          {isDwd && mappingMode === 'SOURCE' && tablesProblem && <Alert type="error" showIcon className="mb-4"
+            message="来源库表读取失败" description={tablesProblem}
+            action={<Button size="small" loading={tablesLoading} onClick={() => void loadSourceTables(sourceDatasourceId)}>重试库表</Button>} />}
+          {isDwd && mappingMode === 'SOURCE' && columnsProblem && <Alert type="error" showIcon className="mb-4"
+            message="来源字段读取失败" description={columnsProblem}
+            action={<Button size="small" loading={columnsLoading} disabled={!sourceDatasourceId || !sourceDatabase || !sourceTable}
+              onClick={() => { if (sourceDatasourceId && sourceDatabase && sourceTable) void loadSourceColumns(sourceDatasourceId, sourceDatabase, sourceTable); }}>重试字段</Button>} />}
           <div className="model-mapping-editor__expression-heading">
             <label htmlFor="transformExpr">
               {mappingMode === 'EXPRESSION' ? '表达式' : '转换表达式'}
               {mappingMode === 'SOURCE' && <span>可选</span>}
             </label>
-            <Button type="link" size="small" onClick={() => void checkExpression()}>校验</Button>
+            <Button type="link" size="small" loading={isDwd && expressionLoading} onClick={() => void checkExpression()}>校验</Button>
           </div>
           <Form.Item
             name="transformExpr"
@@ -751,18 +922,10 @@ const MappingPanel: React.FC = () => {
                 : '留空则直接使用源字段'}
             />
           </Form.Item>
-          <div className="model-mapping-editor__functions">
-            <span>常用函数</span>
-            <div>
-              {COMMON_FUNCTIONS.map((func) => (
-                <button type="button" key={func} disabled={editorLoading || saving || !maySave}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => insertFunction(func)}>
-                  {func.split('(')[0]}
-                </button>
-              ))}
-            </div>
-          </div>
+          {isDwd && expressionFeedback && <Typography.Paragraph className="!mb-3" type={expressionFeedback.valid ? 'secondary' : 'danger'}>
+            {expressionFeedback.message}
+          </Typography.Paragraph>}
+          {isDwd ? <details className="dwd-mapping-functions"><summary>常用函数</summary>{commonFunctions}</details> : commonFunctions}
           {mappingMode === 'SOURCE' && maySuggest && (
             <div className="model-mapping-editor__ai">
               <Button type="text" size="small" aria-expanded={aiExpanded}

@@ -1,4 +1,4 @@
-import { Alert, Button, Select, Space, Tag, Typography } from 'antd';
+import { Alert, Button, Empty, Select, Space, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
@@ -27,6 +27,7 @@ export default function ModelCreationLogicalBasis({
   const [chosen, setChosen] = useState<{ scope: string; id: number }>();
   const [versions, setVersions] = useState<{ scope: string; id: number; list: LogicalDraftVersion[]; error?: boolean }>();
   const [reload, setReload] = useState(0);
+  const [versionReload, setVersionReload] = useState(0);
   const [fetching, setFetching] = useState(false);
   const [versionsLoading, setVersionsLoading] = useState(false);
   const selected = chosen?.scope === scope ? chosen.id : undefined;
@@ -39,6 +40,7 @@ export default function ModelCreationLogicalBasis({
     setCatalog(undefined);
     setChosen(undefined);
     setVersions(undefined);
+    setFetching(false);
     if (!active || !canRead || !currentProject?.id || !processId) return;
     let live = true;
     setFetching(true);
@@ -54,6 +56,7 @@ export default function ModelCreationLogicalBasis({
 
   useEffect(() => {
     setVersions(undefined);
+    setVersionsLoading(false);
     if (selected == null || !selectedDraft) return;
     let live = true;
     setVersionsLoading(true);
@@ -69,64 +72,69 @@ export default function ModelCreationLogicalBasis({
       if (live) setVersions({ scope, id: selected, list: [], error: true });
     }).finally(() => { if (live) setVersionsLoading(false); });
     return () => { live = false; };
-  }, [scope, selected, selectedDraft?.id]);
+  }, [scope, selected, selectedDraft?.id, versionReload]);
 
   if (!layer) return null;
 
   if (!active) return null;
 
-  if (!processId) return <Alert type="warning" showIcon
-    message="建议先明确业务过程及数据粒度"
-    description="非 ODS 模型通常需要业务逻辑模型解释字段和粒度。这里允许保存物理草稿，但不会虚构逻辑版本、正式映射或批准状态。"
-  />;
-  if (!canRead || !currentProject?.id) return <Alert showIcon type="warning"
+  if (!processId) return <Typography.Text type="secondary">
+    关联业务过程后，可查看对应的逻辑设计。
+  </Typography.Text>;
+  if (!canRead || !currentProject?.id) return <Alert showIcon type="error"
     message="无法读取当前项目逻辑设计依据"
-    description="尚未获得建模读取权限或当前项目无效，不能将逻辑设计状态标成“没有模型”。"
+    description="请确认已选择项目并具有建模读取权限。"
   />;
 
   return (
     <section aria-label="逻辑设计依据核对" className="space-y-3 rounded-xl border border-[#dfe5ed] bg-[#f8fafc] p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <Typography.Text strong>业务逻辑依据（只读核对）</Typography.Text>
+          <Typography.Text strong>逻辑设计参考</Typography.Text>
           <Typography.Paragraph className="!mb-0 !text-[12px]" type="secondary">
-            先明确逻辑草稿和真实冻结版本，再创建物理结构。此选择不会写入物理模型，也不是正式的逻辑↔物理绑定。
+            参考业务实体、属性和粒度；创建后可继续核对字段映射。
           </Typography.Paragraph>
         </div>
         <Space>
-          <Button size="small" loading={fetching} onClick={() => setReload(v => v + 1)}>重新核验</Button>
-          <Button size="small" type="link" onClick={() => onOpenLogical(processId)}>打开逻辑工作台</Button>
+          <Button size="small" loading={fetching} onClick={() => setReload(v => v + 1)}>刷新</Button>
+          <Button size="small" type="link" onClick={() => onOpenLogical(processId)}>查看逻辑模型</Button>
         </Space>
       </div>
       {catalog?.scope === scope && catalog.error ? (
         <Alert type="error" showIcon message="逻辑草稿目录暂时无法读取"
-          description="读取失败不代表没有业务设计；可重新核验或返回逻辑模型页。" />
+          description="请刷新重试，或前往逻辑模型查看。" />
       ) : catalog?.scope === scope && drafts.length === 0 ? (
-        <Alert type="warning" showIcon message="该业务过程暂无可读取的逻辑草稿"
-          description="推荐先在逻辑工作台创建实体、业务主键和关系，再冻结草稿版本。当前创建操作仅形成物理设计草稿。" />
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} imageStyle={{ height: 36 }}
+          description="该业务过程暂无逻辑模型" style={{ marginBlock: 12 }}>
+          <Button size="small" onClick={() => onOpenLogical(processId)}>创建逻辑模型</Button>
+        </Empty>
       ) : (
         <div>
           <Select
+            aria-label="逻辑模型参考"
             className="w-full"
             showSearch optionFilterProp="label"
             allowClear
             loading={fetching}
             disabled={fetching || !drafts.length}
             value={selected}
-            placeholder={fetching ? '正在核对当前项目逻辑模型…' : '选择要核对的逻辑草稿（不自动绑定）'}
-            options={drafts.map(x => ({ value: x.id, label: `${x.name} · ${x.code} (#${x.id})` }))}
+            placeholder={fetching ? '正在加载逻辑模型…' : '选择逻辑模型（可选）'}
+            options={drafts.map(x => ({ value: x.id, label: `${x.name} · ${x.code}` }))}
             onChange={(v) => { setChosen(v === undefined ? undefined : { scope, id: v }); setVersions(undefined); }}
           />
           {selectedDraft && (
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px]">
               <Tag color={latestVersion ? 'blue' : 'default'}>
-                {versionsLoading ? '核验冻结版本中' : versions?.error ? '冻结版本读取失败' : latestVersion
-                  ? `已存在冻结快照 V${latestVersion}` : '尚无已核验冻结版本'}
+                {versionsLoading ? '加载版本中' : versions?.error ? '版本读取失败' : latestVersion
+                  ? `设计版本 V${latestVersion}` : '尚无设计版本'}
               </Tag>
               <span className="text-[#667085]">
-                {latestVersion ? '可以创建物理草稿后，进入模型详情“业务逻辑依据”重新选择并预检此版本。'
-                  : '建议完成业务主键、粒度与标准字段核对后冻结；此处不会伪造逻辑版本。'}
+                {versionsLoading ? '正在核对版本。' : versions?.error ? '请重新读取后确认。' : latestVersion
+                  ? '仅供参考；创建后可在“业务逻辑依据”中核对映射。'
+                  : '可先保存物理草稿，或前往逻辑模型保存设计版本。'}
               </span>
+              {versions?.error && <Button size="small" type="link"
+                onClick={() => setVersionReload(v => v + 1)}>重新读取版本</Button>}
             </div>
           )}
         </div>

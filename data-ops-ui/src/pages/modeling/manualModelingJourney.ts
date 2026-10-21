@@ -29,11 +29,11 @@ export type ManualJourneyResult = {
 };
 
 export const MANUAL_JOURNEY_LABELS = [
-  '逻辑设计与冻结',
-  '选择并预检物理目标',
-  '核验并保存映射',
-  '冻结映射修订',
-  '发布设计与历史回读',
+  '逻辑设计',
+  '物理模型',
+  '字段映射',
+  '保存映射版本',
+  '发布设计',
 ] as const;
 
 export function deriveManualJourney(facts: ManualJourneyFacts): ManualJourneyResult {
@@ -45,54 +45,54 @@ export function deriveManualJourney(facts: ManualJourneyFacts): ManualJourneyRes
   if (!facts.hasLogicalDraft) {
     if (facts.hasExistingDraftChoices) {
       return next(0, '选择现有逻辑草稿',
-        '当前项目已有可选草稿，优先选择并核对业务过程，不重复创建业务模型。', 'logical');
+        '选择已有草稿，继续设计实体和属性。', 'logical');
     }
     return next(0, '创建逻辑草稿',
-      '从业务过程创建逻辑草稿，补齐业务实体、粒度和属性；不会自动生成物理表。', 'logical');
+      '选择业务过程，定义实体、属性和关系。', 'logical');
   }
   if (!facts.hasFrozenLogicalVersion) {
-    return next(0, '定位逻辑设计并冻结快照',
-      '先完成逻辑字段与业务关系的人工设计，再冻结一个可追溯的逻辑版本。', 'logical');
+    return next(0, '保存设计版本',
+      '完成实体、属性和关系后，保存供物理建模引用的设计快照。', 'logical');
   }
   if (!facts.hasPhysicalTarget || !facts.hasMatchingPreview) {
-    return next(1, '选择物理模型并发起预检',
-      '使用已冻结的逻辑版本，查找当前项目的目标物理模型并重新核验结构。', 'physical');
+    return next(1, '选择物理模型并核对',
+      '选择目标模型，对照逻辑设计版本和物理字段。', 'physical');
   }
   if (facts.previewBlocked) {
-    return next(1, '处理物理预检阻断项',
-      '物理预检有阻断项，必须修复并重新核验，不能据此保存或发布映射。', 'mapping', true);
+    return next(1, '处理模型核对问题',
+      '按核对结果修正模型后，重新检查字段映射。', 'mapping', true);
   }
   if (facts.physicalLayer !== 'DWD') {
-    return next(2, '查看物理预检结果',
-      '当前正式 MappingSet 保存与设计发布只支持 DWD；其他层不可套用 DWD 写操作。', 'mapping', true);
+    return next(2, '查看模型核对结果',
+      '此处支持保存和发布 DWD 映射；当前分层请在对应物理模型中继续设计。', 'mapping', true);
   }
   if (facts.mappingUnavailable) {
-    return next(2, '处理映射读取或持久化异常',
-      '当前映射版本无法确认，必须重新读取并恢复正确证据，不允许覆盖或继续发布。', 'mapping', true);
+    return next(2, '处理映射读取异常',
+      '重新读取已保存映射，确认版本后继续。', 'mapping', true);
   }
   if (facts.reviewReady === false) {
-    return next(2, '完成人工映射选择与校验',
-      '逐列选择同标准字段的逻辑属性及 DIRECT/RENAME 规则，再执行服务端人工映射核验。', 'mapping');
+    return next(2, '核对字段映射',
+      '选择对应逻辑属性和映射规则，再检查本次选择。', 'mapping');
   }
   if (!facts.mappingDraftMatches) {
-    return next(2, '保存或重新核对 MappingSet',
-      '保存人工确认的映射；若已有草稿与当前逻辑/物理证据不一致，先重新核验。', 'mapping');
+    return next(2, '保存字段映射',
+      '保存已核对的映射；已有草稿有变化时，请先重新核对。', 'mapping');
   }
   if (!facts.mappingFrozenMatches) {
-    return next(3, '冻结 MappingRevision',
-      '基于当前已保存草稿执行冻结，持久产生不可变修订；冻结并不等于发布。', 'mapping');
+    return next(3, '保存映射版本',
+      '为当前映射保存不可变版本，供设计发布引用。', 'mapping');
   }
   if (facts.approvalPending) {
     return next(4, '查看发布审批',
-      '审批尚未结束。没有当前审批的正式发布回执，不能把设计标记为已发布。', 'mapping', true);
+      '等待审批结果；审批通过前，设计仍未发布。', 'mapping', true);
   }
   if (facts.verifiedPublishedReceipt) {
     return {
       step: 5, action: '打开已发布物理模型',
-      explanation: '当前会话已回读服务端历史，核对版本号与 MappingRevision；未创建任务或执行 SQL。',
+      explanation: '设计版本及映射版本已核对。数据加工请在开发工作台继续。',
       anchor: 'published', blocked: false, complete: true,
     };
   }
   return next(4, '确认发布 DWD 设计版本',
-    '完成正式发布确认后必须回读准确的 ModelVersion 与 MappingRevision；不代表加工任务执行。', 'mapping');
+    '确认发布当前设计和映射版本，完成后可查看发布记录。', 'mapping');
 }

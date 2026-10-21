@@ -7,6 +7,7 @@ import type { SemanticDomainNode, SemanticLayerRecord, SemanticProcessRecord } f
 import { collectDomainSubtreeIds, toDomainTreeData } from '@/services/semantic/domainTree';
 import { rootDomainForProcess, verifiedProcessInDomain } from './modelCreationScope';
 import ModelCreationLogicalBasis from './ModelCreationLogicalBasis';
+import '../dwdWorkspace.less';
 
 export interface WizardSubmitPayload {
   base: ModelingCreatePayload;
@@ -44,6 +45,7 @@ const ModelCreateWizardDrawer = ({
   const codeManuallyEdited = useRef(false);
   const initialized = useRef(false);
   const selectedLayerCode = Form.useWatch('layerCode', form);
+  const isDwd = selectedLayerCode === 'DWD';
   const selectedName = Form.useWatch('name', form);
   const selectedDomainId = Form.useWatch('domainId', form);
   const selectedProcessId = Form.useWatch('processId', form);
@@ -135,17 +137,18 @@ const ModelCreateWizardDrawer = ({
   return (
     <Drawer
       open={open} width="min(780px, 100vw)" placement="right" closable={!loading}
+      rootClassName={isDwd ? 'dwd-model-create' : undefined}
       destroyOnClose maskClosable={false} keyboard={!loading}
       onClose={() => discardAndExit(onClose)}
       title={<div>
-        <div className="text-[19px] font-semibold leading-7">创建物理模型草稿</div>
-        <div className="text-[12px] font-normal text-[#667085]">业务依据 → 技术目标 → 创建草稿 · 不发布、不执行</div>
+        <div className="text-[19px] font-semibold leading-7">{isDwd ? '新建 DWD 明细模型' : '创建物理模型草稿'}</div>
+        {!isDwd && <div className="text-[12px] font-normal text-[#667085]">业务依据 → 技术目标 → 创建草稿 · 不发布、不执行</div>}
       </div>}
       extra={<Space>
         <YakButton disabled={loading} onClick={() => discardAndExit(onClose)}>取消</YakButton>
         <YakButton type="primary" loading={loading}
           disabled={!hasDomainOptions || !hasLayerOptions || scopeNotReady}
-          onClick={() => void handleSubmit()}>创建物理草稿</YakButton>
+          onClick={() => void handleSubmit()}>{isDwd ? '创建模型' : '创建物理草稿'}</YakButton>
       </Space>}
       styles={{ header: { padding: '16px 22px', borderBottom: '1px solid #e5eaf0' },
         body: { background: '#f8fafc', padding: '20px 22px' } }}
@@ -166,9 +169,9 @@ const ModelCreateWizardDrawer = ({
           description="业务过程或业务域当前不可读取。此时不允许将 URL 中的 ID 当成真实授权归属创建模型。" /> : null}
         <section className="mb-4 rounded-xl border border-[#e4e9f0] bg-white p-5 max-sm:p-4">
           <div className="mb-1 flex items-center gap-2"><Tag color="blue">01</Tag><Typography.Text strong>业务上下文</Typography.Text></div>
-          <Typography.Paragraph type="secondary" className="!mb-4 !text-[12px]">
+          {!isDwd && <Typography.Paragraph type="secondary" className="!mb-4 !text-[12px]">
             明确当前业务域、过程与业务粒度；例如订单与订单明细是不同粒度，不能只按名称自动关联。
-          </Typography.Paragraph>
+          </Typography.Paragraph>}
           <Form.Item name="domainId" label="业务域" rules={[{ required: true, message: '请选择当前项目业务域' }]}>
             <TreeSelect treeData={toDomainTreeData(domainTree)} treeDefaultExpandAll
               allowClear={!processScoped} disabled={processScoped || scopeNotReady}
@@ -182,11 +185,11 @@ const ModelCreateWizardDrawer = ({
           </Form.Item>
         </section>
 
-        <section className="mb-4 rounded-xl border border-[#e4e9f0] bg-white p-5 max-sm:p-4">
+        <section className={'mb-4 rounded-xl border border-[#e4e9f0] bg-white p-5 max-sm:p-4' + (isDwd ? ' dwd-create-target' : '')}>
           <div className="mb-1 flex items-center gap-2"><Tag color="blue">02</Tag><Typography.Text strong>物理目标</Typography.Text></div>
-          <Typography.Paragraph type="secondary" className="!mb-4 !text-[12px]">
+          {!isDwd && <Typography.Paragraph type="secondary" className="!mb-4 !text-[12px]">
             分层和目标方言来自当前项目已有配置；本次创建仅保存物理模型定义，不会生成建表 SQL 或自动发布。
-          </Typography.Paragraph>
+          </Typography.Paragraph>}
           <Form.Item name="layerCode" label="数仓目标分层" rules={[{ required: true, message: '请选择目标分层' }]}>
             <Select placeholder="选择已配置的数仓分层"
               options={layers.map(layer => ({ value: layer.code, label: `${layer.name}（${layer.code}）` }))} />

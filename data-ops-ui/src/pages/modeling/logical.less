@@ -1,0 +1,44 @@
+.modeling-studio-logical {
+  .logical-journey { margin-bottom: 16px; border-color: #eaecf0; border-radius: 10px; }
+  .logical-journey .ant-card-head { min-height: 42px; border-bottom: 0; }
+  .logical-journey .ant-card-body { padding: 4px 20px 14px; }
+  .logical-next-step {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+    gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #f0f1f3;
+  }
+  .logical-process-links { display: flex; gap: 8px; margin: -8px 0 8px; }
+  .modeling-studio-logical-selector { align-self: start; }
+  .modeling-studio-logical-selector .ant-card-head { padding: 0 12px; }
+  .modeling-studio-logical-selector .ant-card-head-title { font-size: 14px; }
+  .modeling-studio-logical-choice { margin-bottom: 0; }
+  .modeling-studio-logical-choice:disabled { opacity: .6; cursor: wait; }
+  .logical-design-summary .ant-card-head { flex-wrap: wrap; gap: 8px; padding: 12px 20px; }
+  .logical-design-summary .ant-card-body { padding: 12px 20px; }
+  .logical-physical-target { display: flex; margin-bottom: 18px; }
+  .logical-target-select { width: 300px; max-width: 100%; }
+  #manual-modeling-mapping { margin-top: 16px; }
+  #manual-modeling-logical, #manual-modeling-physical, #manual-modeling-mapping { scroll-margin-top: 88px; }
+}
+@media (max-width: 1439px) {
+  .modeling-studio-logical .modeling-studio-logical-board { grid-template-columns: minmax(0, 1fr); }
+  .modeling-studio-logical .modeling-studio-logical-selector .flex.flex-col {
+    flex-direction: row; overflow-x: auto; padding-bottom: 4px;
+  }
+  .modeling-studio-logical .modeling-studio-logical-choice { min-width: 190px; width: 190px; flex-shrink: 0; }
+}
+@media (max-width: 640px) {
+  .modeling-studio-logical .logical-journey .ant-card-body { padding-inline: 12px; }
+  .modeling-studio-logical .logical-next-step .ant-btn { width: 100%; }
+  .modeling-studio-logical .logical-target-select { width: 240px; }
+  .modeling-studio-logical .logical-design-summary .ant-card-head-wrapper { flex-wrap: wrap; gap: 10px; }
+}
+
+.logical-editor-modal.ant-modal {
+  top: 24px;
+  max-width: calc(100vw - 32px);
+  padding-bottom: 24px;
+  .ant-modal-content { display: flex; flex-direction: column; max-height: calc(100dvh - 48px); }
+  .ant-modal-header, .ant-modal-footer { flex-shrink: 0; }
+  .ant-modal-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .ant-modal-footer { padding-top: 12px; }
+}

@@ -23,6 +23,7 @@ import { verifiedOdsModelSourceReturn } from '@/utils/liveSourceOdsJourney';
 import type { ModelingModelRecord } from '@/services/modeling/types';
 import { listSemanticLayers } from '@/services/semantic/api';
 import type { SemanticLayerRecord } from '@/services/semantic/types';
+import '../dwdWorkspace.less';
 
 /** 模型统一视图(ticket 25):一页看清全貌;各维度空态优雅降级、懒加载。 */
 const UnifiedModelView: React.FC = () => {
@@ -48,6 +49,10 @@ const UnifiedModelView: React.FC = () => {
   const reportStructureEditor = useCallback((state: ModelStructureEditorStatus) => {
     setStructureEditor({ modelId, state });
   }, [modelId]);
+  const [mappingEditor, setMappingEditor] = useState<{ scope: string; state: ModelStructureEditorStatus }>();
+  const reportMappingEditor = useCallback((state: ModelStructureEditorStatus) => {
+    setMappingEditor({ scope: modelScope, state });
+  }, [modelScope]);
 
   const sourceReturnPath = model?.id != null && String(model.id) === modelId
     ? verifiedOdsModelSourceReturn(model, new URLSearchParams(location.search))
@@ -56,15 +61,19 @@ const UnifiedModelView: React.FC = () => {
   const [datasources, setDatasources] = useState<DataSourceRecord[]>([]);
   const [loadError, setLoadError] = useState(false);
   const guardDraftAndNavigate = (navigate: () => void, returningToSource = false) => {
-    const editor = structureEditor && structureEditor.modelId === modelId ? structureEditor.state : undefined;
+    const editingDwdMapping = model?.layerCode?.toUpperCase() === 'DWD' && activeTab === 'mapping';
+    const editor = editingDwdMapping
+      ? mappingEditor?.scope === modelScope ? mappingEditor.state : undefined
+      : structureEditor && structureEditor.modelId === modelId ? structureEditor.state : undefined;
     if (editor?.loading || editor?.saving) {
-      message.warning('模型表结构正在加载或保存，请完成后再离开。');
+      message.warning(editingDwdMapping ? '来源映射正在加载或保存，请完成后再离开。' : '模型表结构正在加载或保存，请完成后再离开。');
       return;
     }
     if (editor?.dirty) {
       Modal.confirm({
-        title: returningToSource ? '物理模型还有未保存的改动' : '当前物理表结构还有未保存改动',
-        content: returningToSource
+        title: editingDwdMapping ? '来源映射还有未保存的修改' : returningToSource ? '物理模型还有未保存的改动' : '当前物理表结构还有未保存改动',
+        content: editingDwdMapping ? '离开会放弃当前未保存的映射修改。'
+          : returningToSource
           ? '离开会放弃当前未保存的字段、主键、索引和表属性修改；请先保存，或者明确放弃后返回来源表。'
           : '离开当前字段编辑界面会丢弃未保存的字段、主键、索引和表属性修改。请先保存，或明确放弃后继续。',
         okText: returningToSource ? '放弃未保存改动并返回' : '放弃修改并继续', okType: 'danger',
@@ -125,6 +134,7 @@ const UnifiedModelView: React.FC = () => {
   const layer = model?.layerCode ? layers.find((item) => item.code === model.layerCode) : undefined;
   const layerLabel = layer ? `${layer.name}（${layer.code}）` : (model?.layerCode ?? '未关联');
   const isOdsModel = model?.layerCode?.toUpperCase() === 'ODS';
+  const isDwdModel = model?.layerCode?.toUpperCase() === 'DWD';
   const databaseName = layer?.databaseName ?? '';
   const datasourceName = layer?.datasourceId
     ? (datasources.find((item) => item.id === layer.datasourceId)?.name ?? `#${layer.datasourceId}`)
@@ -169,7 +179,8 @@ const UnifiedModelView: React.FC = () => {
     { key: 'overview', label: '基本信息', icon: <Info size={16} aria-hidden />,
       children: overview },
     { key: 'structure', label: '模型设计', icon: <Columns3 size={16} aria-hidden />,
-      children: <ModelingModelDetail key={modelId} onEditorStateChange={reportStructureEditor} /> },
+      children: <ModelingModelDetail key={modelId} layerCode={model?.layerCode} onEditorStateChange={reportStructureEditor}
+        onNavigateTab={isDwdModel ? openTab : undefined} /> },
     ...(showPhysicalTable ? [{ key: 'physical', label: '物理表', icon: <Database size={16} aria-hidden />,
       children: model && String(model.id) === modelId ? <ModelPhysicalTablePanel model={model}
         defaultTargetId={layer?.datasourceId} defaultDatabase={layer?.databaseName} />
@@ -179,7 +190,8 @@ const UnifiedModelView: React.FC = () => {
       search={location.search}
       onNavigateLogical={(path) => guardDraftAndNavigate(() => history.push(path))}
     /> }] : []),
-    { key: 'mapping', label: '来源映射', icon: <ArrowLeftRight size={16} aria-hidden />, children: <MappingPanel /> },
+    { key: 'mapping', label: '来源映射', icon: <ArrowLeftRight size={16} aria-hidden />,
+      children: <MappingPanel layerCode={model?.layerCode} onEditorStateChange={isDwdModel ? reportMappingEditor : undefined} /> },
     { key: 'version', label: '版本管理', icon: <History size={16} aria-hidden />, children: <ModelVersionPanel /> },
     { key: 'lineage', label: '血缘关系', icon: <Network size={16} aria-hidden />, children: <ModelLineagePanel /> },
     { key: 'lifecycle', label: '生命周期', icon: <RefreshCw size={16} aria-hidden />,
@@ -194,10 +206,11 @@ const UnifiedModelView: React.FC = () => {
   };
 
   return (
-    <div className={'modeling-studio-page modeling-studio-detail' + (isOdsModel ? ' modeling-studio-detail-ods' : '')}>
+    <div className={'modeling-studio-page modeling-studio-detail' + (isOdsModel ? ' modeling-studio-detail-ods' : '')
+      + (isDwdModel ? ' modeling-studio-detail-dwd' : '')}>
       <ModelingStudioHeader area="physical" title={model?.name || '物理模型设计工作台'}
-        eyebrow={isOdsModel ? null : '数据建设 / 数仓建模 / 模型设计'}
-        description={isOdsModel ? undefined : (layerDescription[(model?.layerCode || '').toUpperCase()] ||
+        eyebrow={isOdsModel || isDwdModel ? null : '数据建设 / 数仓建模 / 模型设计'}
+        description={isOdsModel || isDwdModel ? undefined : (layerDescription[(model?.layerCode || '').toUpperCase()] ||
           '在同一物理模型对象中核对业务依据、数据结构、映射与发布版本。')}
         context={<>
           <span>分层：{layerLabel}</span>
@@ -210,7 +223,7 @@ const UnifiedModelView: React.FC = () => {
           <YakButton onClick={() => guardDraftAndNavigate(() => history.push('/modeling'))}>返回模型库</YakButton>
         </>} />
 
-      {!isOdsModel ? <section className="modeling-studio-detail-context" aria-label="当前模型设计边界">
+      {!isOdsModel && !isDwdModel ? <section className="modeling-studio-detail-context" aria-label="当前模型设计边界">
         <div><strong>当前对象</strong><div>{model?.name || '加载模型中'} · {model?.layerCode || '未配置分层'}</div></div>
         <div><strong>设计目标</strong><div>{model?.processName || '业务过程未关联'}</div></div>
         <div><strong>发布事实</strong><div>{model?.status ? (MODELING_STATUS_LABELS[model.status] || model.status) : '加载中'}</div></div>
@@ -220,7 +233,15 @@ const UnifiedModelView: React.FC = () => {
       <Tabs id="modeling-detail" className="modeling-studio-workspace" tabPosition="left"
         activeKey={activeTab} onChange={openTab}
         items={items.filter((item) => section.tabs.includes(item.key))}
-        renderTabBar={({ id }) => (
+        renderTabBar={({ id }) => isDwdModel ? (
+          <nav className="modeling-studio-dwd-nav" aria-label="DWD 建模导航">
+            {items.map(item => <button key={item.key} type="button"
+              id={`${id}-tab-${item.key}`} aria-current={activeTab === item.key ? 'page' : undefined}
+              aria-controls={`${id}-panel-${item.key}`}
+              className={'modeling-studio-nav-item' + (activeTab === item.key ? ' is-active' : '')}
+              onClick={() => openTab(item.key)}>{item.icon}<span>{item.label}</span></button>)}
+          </nav>
+        ) : (
           <nav className="modeling-studio-detail-nav" aria-label="模型详情导航">
             <div className="modeling-studio-detail-nav-inner">
               {sections.map((group) => (

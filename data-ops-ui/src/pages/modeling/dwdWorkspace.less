@@ -1,0 +1,38 @@
+.modeling-studio-detail-dwd {
+  .modeling-studio-heading h1 { margin-top: 0; }
+  .modeling-studio-header-top { padding: 16px 20px; }
+  .modeling-studio-workspace.ant-tabs { grid-template-columns: minmax(0, 1fr); }
+  .modeling-studio-dwd-nav { display: flex; overflow-x: auto; gap: 4px; padding: 8px 12px; border-bottom: 1px solid #eaecf0; }
+  .modeling-studio-dwd-nav button { width: auto; flex-shrink: 0; white-space: nowrap; padding: 10px 14px; }
+  .modeling-studio-dwd-nav .is-active::before { left: 12px; right: 12px; top: auto; bottom: -1px; height: 2px; width: auto; border-radius: 2px; }
+}
+.modeling-studio-editor-dwd {
+  .modeling-studio-editor-head { padding: 0 0 16px; background: transparent; border: 0; border-bottom: 1px solid #eaecf0; border-radius: 0; }
+  .modeling-studio-editor-head h2 { margin: 0; }
+  .modeling-studio-editor-tools { flex-wrap: wrap; }
+  .modeling-studio-foundation { margin-top: 0; }
+  .dwd-field-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+  .dwd-field-toolbar .ant-space { flex-wrap: wrap; }
+  .dwd-import-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+}
+.dwd-publication-checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.dwd-publication-checks > div { padding: 14px; border: 1px solid #eaecf0; border-radius: 8px; background: #fafbfc; }
+.dwd-publication-review .ant-typography { overflow-wrap: anywhere; }
+.dwd-model-create .dwd-create-target {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px;
+  > div:first-child, > .ant-form-item:last-child { grid-column: 1 / -1; }
+}
+.dwd-modeling-modal.ant-modal {
+  top: 24px; max-width: calc(100vw - 32px); padding-bottom: 24px;
+  .ant-modal-content { display: flex; flex-direction: column; max-height: calc(100dvh - 48px); }
+  .ant-modal-header, .ant-modal-footer { flex-shrink: 0; }
+  .ant-modal-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .ant-modal-footer { padding-top: 12px; }
+}
+@media (max-width: 700px) {
+  .modeling-studio-detail-dwd .modeling-studio-workspace.ant-tabs-left > .ant-tabs-content-holder { padding: 16px 12px; }
+  .modeling-studio-editor-dwd .modeling-studio-editor-main-actions { width: 100%; }
+  .modeling-studio-editor-dwd .modeling-studio-editor-main-actions .ant-btn { flex: 1; }
+  .dwd-publication-checks { grid-template-columns: minmax(0, 1fr); }
+  .dwd-model-create .dwd-create-target { grid-template-columns: minmax(0, 1fr); }
+}

@@ -25,10 +25,9 @@ beforeEach(() => {
   jest.mocked(getLogicalDraft).mockResolvedValue({ model: draft, process: { id: 15 } as any, entities: [], relations: [] });
 });
 
-it('does not claim ODS semantics before the target warehouse layer is selected', () => {
+it('stays out of the form before the target warehouse layer is selected', () => {
   const { container } = render(<ModelCreationLogicalBasis processId={15} onOpenLogical={jest.fn()} />);
   expect(container).toBeEmptyDOMElement();
-  expect(screen.queryByText('ODS 贴源建模是独立路径')).not.toBeInTheDocument();
   expect(listLogicalDrafts).not.toHaveBeenCalled();
 });
 
@@ -47,7 +46,7 @@ it('read-only roles do not request or mislabel an inaccessible logical catalog a
 
 it('shows the missing business process explicitly without manufacturing an approved logical version', () => {
   render(<ModelCreationLogicalBasis layer="DIM" onOpenLogical={jest.fn()} />);
-  expect(screen.getByText('建议先明确业务过程及数据粒度')).toBeInTheDocument();
+  expect(screen.getByText('关联业务过程后，可查看对应的逻辑设计。')).toBeInTheDocument();
   expect(listLogicalDrafts).not.toHaveBeenCalled();
 });
 
@@ -55,8 +54,8 @@ it('only reads drafts for the current process and offers the original logical wo
   const open = jest.fn();
   render(<ModelCreationLogicalBasis layer="DWD" processId={15} onOpenLogical={open} />);
   await waitFor(() => expect(listLogicalDrafts).toHaveBeenCalledTimes(1));
-  expect(await screen.findByText('业务逻辑依据（只读核对）')).toBeInTheDocument();
-  fireEvent.click(screen.getByText('打开逻辑工作台'));
+  expect(await screen.findByText('逻辑设计参考')).toBeInTheDocument();
+  fireEvent.click(screen.getByText('查看逻辑模型'));
   expect(open).toHaveBeenCalledWith(15);
   expect(listLogicalVersions).not.toHaveBeenCalled(); // no implicit frozen version selection
 });
@@ -65,5 +64,28 @@ it('separates catalog read failure from the legitimate no-draft state', async ()
   jest.mocked(listLogicalDrafts).mockRejectedValueOnce(new Error('revoked'));
   render(<ModelCreationLogicalBasis layer="DWD" processId={15} onOpenLogical={jest.fn()} />);
   expect(await screen.findByText('逻辑草稿目录暂时无法读取')).toBeInTheDocument();
-  expect(screen.queryByText('该业务过程暂无可读取的逻辑草稿')).not.toBeInTheDocument();
+  expect(screen.queryByText('该业务过程暂无逻辑模型')).not.toBeInTheDocument();
+});
+
+it('offers a direct next step from an empty process', async () => {
+  jest.mocked(listLogicalDrafts).mockResolvedValueOnce([]);
+  const open = jest.fn();
+  render(<ModelCreationLogicalBasis layer="DWD" processId={15} onOpenLogical={open} />);
+  expect(await screen.findByText('该业务过程暂无逻辑模型')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '创建逻辑模型' }));
+  expect(open).toHaveBeenCalledWith(15);
+});
+
+it('can retry a failed version read without reselecting the logical model', async () => {
+  jest.mocked(listLogicalVersions).mockRejectedValueOnce(new Error('temporary read failure'));
+  render(<ModelCreationLogicalBasis layer="DWD" processId={15} onOpenLogical={jest.fn()} />);
+  const chooser = screen.getByRole('combobox', { name: '逻辑模型参考' });
+  await waitFor(() => expect(chooser).toBeEnabled());
+  fireEvent.mouseDown(chooser);
+  fireEvent.click(await screen.findByText('订单逻辑设计 · trade_order'));
+  expect(await screen.findByText('版本读取失败')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '重新读取版本' }));
+  expect(await screen.findByText('设计版本 V3')).toBeInTheDocument();
+  expect(listLogicalVersions).toHaveBeenCalledTimes(2);
+  expect(listLogicalDrafts).toHaveBeenCalledTimes(1);
 });

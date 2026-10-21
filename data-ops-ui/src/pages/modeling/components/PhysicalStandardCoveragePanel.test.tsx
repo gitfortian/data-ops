@@ -15,17 +15,22 @@ jest.mock('@/services/modeling/api', () => ({
 }));
 jest.mock('antd', () => {
   const actual = jest.requireActual('antd');
-  return { ...actual, Table: ({ dataSource, columns }: {
+  const ReactLib = jest.requireActual('react');
+  return { ...actual, Table: ({ dataSource, columns, expandable, ...rest }: {
     dataSource: PhysicalStandardCoverageInspection['columns'];
     columns: { key?: string; render?: (
       _: unknown, row: PhysicalStandardCoverageInspection['columns'][number],
     ) => React.ReactNode }[];
-  }) => <div>{dataSource.map(row => <div key={row.columnId}>
+    expandable?: unknown;
+  }) => {
+    if (expandable) return ReactLib.createElement(actual.Table, { dataSource, columns, expandable, ...rest });
+    return <div>{dataSource.map(row => <div key={row.columnId}>
     {row.columnName} : {row.status}
     {columns.map((column, index) => <span key={column.key || index}>
       {column.render?.(undefined, row)}
     </span>)}
-  </div>)}</div> };
+  </div>)}</div>;
+  } };
 });
 
 const report = {
@@ -232,4 +237,66 @@ it('shows missing required linked data standards separately from the standard-fi
   expect(screen.getByText('类型：整数类型 (TYPE) · BIGINT · 当前启用 v1')).toBeInTheDocument();
   expect(screen.getByText('单位：未配置 · 缺少必需引用')).toBeInTheDocument();
   expect(screen.getByText('缺少必需的单位标准引用')).toBeInTheDocument();
+});
+
+it('opts DWD into a focused issue list while keeping all fields and exact repair coordinates available', async () => {
+  (inspectPhysicalStandardCoverage as jest.Mock).mockResolvedValue(report);
+  const locate = jest.fn();
+  render(<PhysicalStandardCoveragePanel modelId={50} layerCode="DWD" open onClose={jest.fn()} onLocateColumn={locate} />);
+  expect(await screen.findByText('DWD 字段标准检查')).toBeInTheDocument();
+  const locateButton = await screen.findByRole('button', { name: '定位字段' });
+  expect(screen.queryByText('order_id')).not.toBeInTheDocument();
+  fireEvent.click(locateButton);
+  expect(locate).toHaveBeenCalledWith(report.columns[1], report);
+  fireEvent.click(screen.getByText('全部字段 (2)'));
+  expect(await screen.findByText('order_id')).toBeInTheDocument();
+  expect(screen.queryByText(report.evidenceSha256)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText('核验详情'));
+  expect(await screen.findByText(report.evidenceSha256)).toBeInTheDocument();
+  expect(screen.getByText('不改变现行发布资格')).toBeInTheDocument();
+});
+
+it('keeps DWD linked-standard and code-set evidence available inside the selected field details', async () => {
+  const mixed = { ...report, columns: [{ ...report.columns[0], dataStandards: {
+    ...report.columns[0].dataStandards, codeSetCode: 'order_status', codeSetStatus: 'MIXED',
+    codeSetItemCount: 3, codeSetEnabledItemCount: 2, codeSetEvidenceSha256: 'f'.repeat(64),
+    status: 'INVALID_REFERENCE', explanation: '码集包含停用项',
+  } }], findings: ['码集包含停用项'] };
+  (inspectPhysicalStandardCoverage as jest.Mock).mockResolvedValue(mixed);
+  render(<PhysicalStandardCoveragePanel modelId={50} layerCode="DWD" open onClose={jest.fn()} />);
+  const expand = await screen.findByRole('button', { name: '查看 order_id 标准详情' });
+  expect(screen.queryByText('整数类型 (TYPE) · BIGINT · 当前启用 v1')).not.toBeInTheDocument();
+  fireEvent.click(expand);
+  expect(await screen.findByText('整数类型 (TYPE) · BIGINT · 当前启用 v1')).toBeInTheDocument();
+  expect(screen.getByText('order_status · 存在停用码值（启用 2/3）')).toBeInTheDocument();
+  expect(screen.getByText('f'.repeat(64))).toBeInTheDocument();
+});
+
+it('retries a failed DWD check in place and never presents failure as complete coverage', async () => {
+  (inspectPhysicalStandardCoverage as jest.Mock).mockRejectedValueOnce(new Error('标准服务暂不可用')).mockResolvedValueOnce(report);
+  render(<PhysicalStandardCoveragePanel modelId={50} layerCode="DWD" open onClose={jest.fn()} />);
+  expect(await screen.findByText('标准检查未完成')).toBeInTheDocument();
+  expect(screen.queryByText('当前引用完整')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /^重\s*试$/ }));
+  expect(await screen.findByText('未关联正式标准：process_time')).toBeInTheDocument();
+  expect(inspectPhysicalStandardCoverage).toHaveBeenCalledTimes(2);
+});
+
+it('rejects a different layer receipt from the opt-in DWD view', async () => {
+  (inspectPhysicalStandardCoverage as jest.Mock).mockResolvedValue({ ...report, layerCode: 'ADS' });
+  render(<PhysicalStandardCoveragePanel modelId={50} layerCode="DWD" open onClose={jest.fn()} />);
+  expect(await screen.findByText('报告分层与当前 DWD 模型不一致，请重新检查。')).toBeInTheDocument();
+  expect(screen.queryByText('未关联正式标准：process_time')).not.toBeInTheDocument();
+});
+
+it('ignores a late DWD report after changing projects', async () => {
+  let finish!: (value: unknown) => void;
+  (inspectPhysicalStandardCoverage as jest.Mock).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }))
+    .mockResolvedValueOnce({ ...report, findings: ['当前项目的待处理项'] });
+  const view = render(<PhysicalStandardCoveragePanel modelId={50} layerCode="DWD" open onClose={jest.fn()} />);
+  mockProjectId = 2;
+  view.rerender(<PhysicalStandardCoveragePanel modelId={50} layerCode="DWD" open onClose={jest.fn()} />);
+  expect(await screen.findByText('当前项目的待处理项')).toBeInTheDocument();
+  await act(async () => finish(report));
+  expect(screen.queryByText('未关联正式标准：process_time')).not.toBeInTheDocument();
 });

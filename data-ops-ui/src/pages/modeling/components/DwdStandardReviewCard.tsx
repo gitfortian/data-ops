@@ -1,6 +1,7 @@
 import { history } from '@umijs/max';
-import { Alert, Button, Card, Space, Tag, Typography } from 'antd';
+import { Alert, Card, Collapse, Descriptions, Space, Tag, Typography } from 'antd';
 import { useEffect, useRef, useState } from 'react';
+import { YakButton } from '@/components/ui';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import {
   inspectPhysicalStandardCoverage, type PhysicalStandardCoverageInspection,
@@ -17,10 +18,7 @@ type Props = {
 
 type InspectionState = 'NOT_CHECKED' | 'READING' | 'ERROR' | 'NEEDS_REVIEW' | 'COVERED_NOW';
 
-/**
- * Read-only prepublication *review*, never an authorization signal or a write
- * gate. A durable publish-time standard snapshot requires DR-06 signoff.
- */
+/** Reads current standard coverage without authorizing or publishing a design. */
 export default function DwdStandardReviewCard({
   physicalModelId, physicalStructureSha256, processId, logicalModelId,
   logicalVersionNo,
@@ -56,6 +54,7 @@ export default function DwdStandardReviewCard({
           || !Number.isSafeInteger(result.columnCount) || result.columnCount <= 0
           || !Number.isSafeInteger(result.missingCount) || result.missingCount < 0
           || !Number.isSafeInteger(result.invalidCount) || result.invalidCount < 0
+          || !Number.isSafeInteger(result.reviewCount) || result.reviewCount < 0
           || !Number.isSafeInteger(result.missingDataStandardCount)
           || result.missingDataStandardCount < 0
           || !Number.isSafeInteger(result.invalidDataStandardCount)
@@ -81,51 +80,58 @@ export default function DwdStandardReviewCard({
   });
   const repairPath = coordinates ? `${coordinates}&review=standard-coverage` : null;
 
+
+  const gaps = report ? [
+    { label: '未关联标准字段', count: report.missingCount },
+    { label: '标准字段不可用', count: report.invalidCount },
+    { label: '缺少数据标准', count: report.missingDataStandardCount },
+    { label: '数据标准不可用', count: report.invalidDataStandardCount },
+    { label: '需人工确认', count: report.reviewCount },
+  ] : [];
+
   return (
-    <Card size="small" className="mt-3" title="发布前检查 · 当前标准与修复入口（只读）"
-      extra={<Tag color={state === 'COVERED_NOW' ? 'blue'
-        : state === 'NEEDS_REVIEW' || state === 'ERROR' ? 'warning' : 'default'}>
-        {state === 'COVERED_NOW' ? '当前未发现覆盖缺口'
-          : state === 'NEEDS_REVIEW' ? '需修复'
-            : state === 'ERROR' ? '核验不可用'
-              : state === 'READING' ? '读取中' : '尚未核验'}
+    <Card size="small" className="mt-3" title="物理字段标准检查"
+      extra={<Tag color={state === 'NEEDS_REVIEW' ? 'gold' : 'default'}>
+        {state === 'COVERED_NOW' ? '已检查'
+          : state === 'NEEDS_REVIEW' ? '需完善'
+            : state === 'ERROR' ? '检查失败'
+              : state === 'READING' ? '检查中' : '待检查'}
       </Tag>}>
-      <Typography.Paragraph type="secondary">
-        对照当前已保存的 DWD 物理结构读取 StandardField 和关联数据标准。
-        这是帮助人工修复的即时证据，不是发布资格、审批冻结快照或 DR-06 已批准的校验器。
+      <Typography.Paragraph type="secondary" className="!mb-3">
+        检查物理字段的标准引用，定位需要完善的字段。
       </Typography.Paragraph>
       <Space wrap>
-        <Button onClick={() => void checkCurrentStandards()}
-          loading={state === 'READING'}>核验当前物理标准</Button>
-        <Button disabled={!repairPath} onClick={() => {
+        <YakButton onClick={() => void checkCurrentStandards()}
+          loading={state === 'READING'}>{report ? '重新检查' : '检查标准'}</YakButton>
+        <YakButton disabled={!repairPath} onClick={() => {
           if (repairPath) history.push(repairPath);
-        }}>打开物理模型修复缺口</Button>
+        }}>打开物理模型</YakButton>
       </Space>
       {state === 'ERROR' && <Alert className="mt-3" type="error" showIcon
-        message="标准证据无法核实" description={error} />}
+        message="标准检查失败，请重试" description={error} />}
       {report && <div className="mt-3">
-        <Space wrap className="mb-2">
-          <Tag>物理列 {report.columnCount}</Tag>
-          <Tag color="orange">缺少字段 {report.missingCount}</Tag>
-          <Tag color="red">字段失效 {report.invalidCount}</Tag>
-          <Tag color="orange">缺少必需数据标准 {report.missingDataStandardCount}</Tag>
-          <Tag color="red">数据标准失效 {report.invalidDataStandardCount}</Tag>
-          <Tag color="orange">待人工审阅 {report.reviewCount}</Tag>
-        </Space>
-        <Alert showIcon type={state === 'NEEDS_REVIEW' ? 'warning' : 'info'}
-          message={state === 'NEEDS_REVIEW'
-            ? '当前存在治理缺口，建议进入物理模型逐列修复'
-            : '本次读取未发现覆盖缺口，但不能据此声明已获正式发布授权'}
-          description={report.findings.slice(0, 4).join('；')
-            || '请继续检查逻辑映射与正式发布规则。'} />
-        {report.findings.length > 4 && <Typography.Text type="secondary">
-          另有 {report.findings.length - 4} 项，打开物理模型查看完整报告。
-        </Typography.Text>}
-        <Typography.Paragraph type="secondary" className="!mt-2 !mb-0">
-          当前证据 SHA-256：<Typography.Text copyable={{ text: report.evidenceSha256 }}>
-            {report.evidenceSha256.slice(0, 16)}…
-          </Typography.Text>。证据未冻结，发布时仍须重新校验。
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Typography.Text type="secondary">已检查 {report.columnCount} 个物理字段</Typography.Text>
+          {gaps.filter(x => x.count > 0).map(x => <Tag key={x.label} color="gold">{x.label} {x.count}</Tag>)}
+        </div>
+        {state === 'NEEDS_REVIEW' ? <Alert showIcon type="warning"
+          message="请在物理模型中完善标准引用"
+          description={report.findings.length ? <ul className="m-0 pl-4">{report.findings.slice(0, 4).map((finding, index) => <li key={index}>{finding}</li>)}</ul> : '存在需人工确认的字段，请打开物理模型查看。'} />
+          : <Typography.Text>当前标准覆盖完整</Typography.Text>}
+        {report.findings.length > 4 && <Typography.Paragraph type="secondary" className="!mt-2 !mb-0">
+          另有 {report.findings.length - 4} 项，请在物理模型中查看。
+        </Typography.Paragraph>}
+        <Typography.Paragraph type="secondary" className="!mt-3 !mb-1 text-xs">
+          当前检查结果供设计参考。
         </Typography.Paragraph>
+        <Collapse ghost size="small" items={[{ key: 'details', label: '查看核验详情', children: (
+          <Descriptions size="small" column={1}>
+            <Descriptions.Item label="物理模型">{report.modelCode} · #{report.modelId}</Descriptions.Item>
+            {gaps.map(x => <Descriptions.Item key={x.label} label={x.label}>{x.count}</Descriptions.Item>)}
+            <Descriptions.Item label="结构摘要"><Typography.Text className="break-all" copyable>{report.structureSha256}</Typography.Text></Descriptions.Item>
+            <Descriptions.Item label="核验摘要"><Typography.Text className="break-all" copyable>{report.evidenceSha256}</Typography.Text></Descriptions.Item>
+          </Descriptions>
+        ) }]} />
       </div>}
     </Card>
   );

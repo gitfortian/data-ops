@@ -168,3 +168,36 @@
     }
   }
 }
+
+.dwd-source-mapping {
+  min-height: 0;
+  color: #242731;
+  background: #fff;
+  border: 1px solid #eaecf0;
+  border-radius: 12px;
+  padding: 20px;
+  &__filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 0 0;
+    .ant-input-search { width: 280px; max-width: 100%; }
+  }
+  .ant-table-cell { overflow-wrap: anywhere; }
+}
+.model-mapping-editor--dwd.ant-modal {
+  top: 24px;
+  max-width: calc(100vw - 32px);
+  padding-bottom: 24px;
+  .ant-modal-content { display: flex; flex-direction: column; max-height: calc(100dvh - 48px); }
+  .ant-modal-header, .ant-modal-footer { flex-shrink: 0; }
+  .ant-modal-body { min-height: 0; max-height: none; overflow-y: auto; overscroll-behavior: contain; }
+  .dwd-mapping-functions {
+    color: #667085;
+    font-size: 12px;
+    summary { cursor: pointer; }
+    .model-mapping-editor__functions { margin-top: 10px; }
+  }
+}

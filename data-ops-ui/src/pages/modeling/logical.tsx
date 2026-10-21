@@ -1,13 +1,17 @@
 import { history, useSearchParams } from '@umijs/max';
 import {
-  Alert, Button, Card, Empty, Form, Input, Modal, Select, Space, Steps, Table, Tag, Typography, message,
+  Alert, Button, Card, Col, Empty, Form, Input, Modal, Row, Select, Space, Steps, Table, Tag, Typography, message,
 } from 'antd';
+import type { FormInstance } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSecurityProject } from '@/contexts/SecurityProjectContext';
 import usePermissionAccess from '@/hooks/usePermissionAccess';
 import { matchesSavedDwdMapping, restoreSavedDwdMapping } from './dwdMappingReview';
 import DwdStandardReviewCard from './components/DwdStandardReviewCard';
 import ModelingStudioHeader from './components/ModelingStudioHeader';
+import LogicalDesignStudio from './components/LogicalDesignStudio';
+import LogicalSemanticReviewModal from './components/LogicalSemanticReviewModal';
+import './logical.less';
 import { deriveManualJourney, MANUAL_JOURNEY_LABELS } from './manualModelingJourney';
 import { getDwdMappingDraft, saveDwdMappingDraft, freezeDwdMappingDraft,
   publishDwdWithMapping, getPublishedDwdMapping,
@@ -47,6 +51,14 @@ type RelationValues = { sourceEntityId: number; targetEntityId: number;
 const errorText = (error: unknown): string =>
   error instanceof Error ? error.message : '操作失败，请检查项目权限及数据状态';
 
+const mappingResultLabels: Record<string, string> = {
+  CANDIDATE: '可供对照', CANDIDATE_ONLY: '可供对照',
+  MISSING_STANDARD: '未关联标准字段', INVALID_STANDARD: '标准字段不可用',
+  AMBIGUOUS_PHYSICAL_REFERENCE: '物理字段待确认', NO_LOGICAL_REFERENCE: '缺少逻辑属性',
+  AMBIGUOUS_LOGICAL_REFERENCE: '逻辑属性待确认', MISSING_LOGICAL_STANDARD: '逻辑属性未关联标准',
+  INVALID_LOGICAL_STANDARD: '逻辑标准不可用', LOGICAL_ATTRIBUTE_UNMAPPED: '缺少物理字段',
+};
+
 /**
  * Draft-first business modeling. Semantic owns field/process definitions;
  * this page never claims that snapshots are deployed/published physical tables.
@@ -67,13 +79,21 @@ export default function LogicalWorkspace() {
   const [journeyProblem, setJourneyProblem] = useState<string>();
   const loadEpoch = useRef(0);
   const [models, setModels] = useState<LogicalModelDraft[]>([]);
+  const [modelSearch, setModelSearch] = useState('');
+  const [detailProblem, setDetailProblem] = useState<string>();
   const [processes, setProcesses] = useState<SemanticProcessRecord[]>([]);
   const [selected, setSelected] = useState<number>();
   const [detail, setDetail] = useState<LogicalDraftDetail>();
   const [versions, setVersions] = useState<LogicalDraftVersion[]>([]);
   const [fields, setFields] = useState<SemanticFieldRecord[]>([]);
+  const [fieldsProblem, setFieldsProblem] = useState<string>();
+  const [fieldsLoading, setFieldsLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const submittingRef = useRef(false);
+  const [saveProblem, setSaveProblem] = useState<string>();
+  const formBaseline = useRef<Record<string, string>>({});
   const [createOpen, setCreateOpen] = useState(false);
   const [entityOpen, setEntityOpen] = useState(false);
   const [editEntityId, setEditEntityId] = useState<number>();
@@ -89,12 +109,16 @@ export default function LogicalWorkspace() {
   }>();
   const [semanticReviewLoading, setSemanticReviewLoading] = useState(false);
   const semanticReviewEpoch = useRef(0);
+  const repairRequest = useRef(0);
+  const [repairLoading, setRepairLoading] = useState(false);
+  const snapshotRequest = useRef(0);
   const [physicalModelId, setPhysicalModelId] = useState<number | null>(null);
   const [physicalSearch, setPhysicalSearch] = useState('');
   const [physicalTargets, setPhysicalTargets] = useState<ModelingModelRecord[]>([]);
   const [physicalTargetsLoading, setPhysicalTargetsLoading] = useState(false);
   const [handoffPreview, setHandoffPreview] = useState<LogicalPhysicalPreview>();
   const [handoffLoading, setHandoffLoading] = useState(false);
+  const handoffSequence = useRef(0);
   const [mappingSelections, setMappingSelections] = useState<Record<number, number>>({});
   const [mappingKinds, setMappingKinds] = useState<Record<number, 'DIRECT' | 'RENAME'>>({});
   const [mappingDraft, setMappingDraft] = useState<DwdMappingDraft>();
@@ -114,6 +138,13 @@ export default function LogicalWorkspace() {
 
   const reload = useCallback(async (id?: number) => {
     const epoch = ++loadEpoch.current;
+    repairRequest.current += 1;
+    snapshotRequest.current += 1;
+    setRepairLoading(false);
+    setSnapshotOpen(false);
+    setPhysicalModelId(null);
+    setPhysicalSearch('');
+    setHandoffLoading(false);
     semanticReviewEpoch.current += 1; setSemanticReview(undefined);
     setSemanticReviewLoading(false);
     setReviewEntryProblem(undefined);
@@ -132,6 +163,9 @@ export default function LogicalWorkspace() {
     setJourneyProcess(undefined);
     setModels([]);
     setProcesses([]);
+    setDetailProblem(undefined);
+    setSaveProblem(undefined);
+    setCreateOpen(false); setEntityOpen(false); setAttributeEntityId(undefined); setRelationOpen(false);
     setLoading(true);
     setDetail(undefined);
     setVersions([]);
@@ -167,9 +201,14 @@ export default function LogicalWorkspace() {
       }
       setSelected(active);
       if (active !== undefined) {
-        const [data, historyVersions] = await Promise.all([
-          getLogicalDraft(active), listLogicalVersions(active),
-        ]);
+        let data: LogicalDraftDetail;
+        let historyVersions: LogicalDraftVersion[];
+        try {
+          [data, historyVersions] = await Promise.all([getLogicalDraft(active), listLogicalVersions(active)]);
+        } catch (error) {
+          if (epoch === loadEpoch.current) setDetailProblem(errorText(error));
+          return;
+        }
         if (epoch !== loadEpoch.current) return;
         if (requestedProcessId && data.model.processId !== requestedProcessId) {
           throw new Error('逻辑草稿不属于指定业务过程');
@@ -216,7 +255,15 @@ export default function LogicalWorkspace() {
   }, [processParam, requestedProcessId, requestedDraftId, draftParam,
     reviewRequested, physicalReturnRequested, currentProject?.id]);
 
-  useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => {
+    void reload();
+    return () => { loadEpoch.current += 1; };
+  }, [reload]);
+
+  useEffect(() => {
+    handoffSequence.current += 1;
+    setHandoffLoading(false);
+  }, [physicalModelId]);
 
   // Reuse Modeling's project-scoped catalog rather than expecting builders to know
   // physical-model database IDs. Server-side search also covers later pages.
@@ -246,17 +293,25 @@ export default function LogicalWorkspace() {
   }, [detail?.model.id, physicalSearch]);
 
   useEffect(() => {
-    if (!detail?.process?.id) { setFields([]); return; }
+    setFields([]); setFieldsProblem(undefined);
+    if (!detail?.process?.id) { setFieldsLoading(false); return; }
     let active = true;
+    setFieldsLoading(true);
     listSemanticProcessFields(detail.process.id)
       .then((result) => { if (active) setFields((result || []).filter((field) => field.status === 'ENABLED')); })
-      .catch(() => { if (active) setFields([]); });
+      .catch((error) => { if (active) setFieldsProblem(errorText(error)); })
+      .finally(() => { if (active) setFieldsLoading(false); });
     return () => { active = false; };
-  }, [detail?.process?.id]);
+  }, [detail?.process?.id, currentProject?.id]);
 
   const selectModel = useCallback(async (id: number) => {
-    if (!models.some((model) => model.id === id)) return;
+    if (savingRef.current || !models.some((model) => model.id === id)) return;
     const epoch = ++loadEpoch.current;
+    repairRequest.current += 1;
+    snapshotRequest.current += 1;
+    setRepairLoading(false);
+    setSnapshotOpen(false);
+    setHandoffLoading(false);
     semanticReviewEpoch.current += 1; setSemanticReview(undefined);
     setReviewFeedback(undefined);
     setHandoffPreview(undefined);
@@ -265,6 +320,9 @@ export default function LogicalWorkspace() {
     setPhysicalModelId(null);
     setPhysicalSearch('');
     setSelected(id);
+    setDetail(undefined);
+    setVersions([]);
+    setDetailProblem(undefined);
     setLoading(true);
     try {
       const [data, previous] = await Promise.all([getLogicalDraft(id), listLogicalVersions(id)]);
@@ -277,6 +335,7 @@ export default function LogicalWorkspace() {
     } catch (err) {
       if (epoch === loadEpoch.current) {
         message.error(errorText(err));
+        setDetailProblem(errorText(err));
         setDetail(undefined);
       }
     } finally { if (epoch === loadEpoch.current) setLoading(false); }
@@ -284,42 +343,87 @@ export default function LogicalWorkspace() {
 
   const perform = async (action: () => Promise<LogicalDraftDetail>, successText: string,
     close: () => void): Promise<LogicalDraftDetail | undefined> => {
+    if (savingRef.current) return undefined;
+    savingRef.current = true;
+    const epoch = loadEpoch.current;
+    setSaveProblem(undefined);
     setSaving(true);
     try {
       const data = await action();
+      if (epoch !== loadEpoch.current) return undefined;
       setDetail(data);
       setHandoffPreview(undefined);
       setReviewResult(undefined);
       setMappingSelections({});
       close();
       message.success(successText);
-      const next = await listLogicalDrafts();
-      setModels(logicalDraftsForProcess(next, requestedProcessId));
+      setModels(previous => {
+        const exists = previous.some(model => model.id === data.model.id);
+        return logicalDraftsForProcess(exists
+          ? previous.map(model => model.id === data.model.id ? data.model : model)
+          : [...previous, data.model], requestedProcessId);
+      });
       return data;
     } catch (err) {
-      message.error(errorText(err));
+      if (epoch === loadEpoch.current) setSaveProblem(errorText(err));
       return undefined;
-    } finally { setSaving(false); }
+    } finally { savingRef.current = false; setSaving(false); }
   };
 
   const entities = useMemo(() => detail?.entities.map((item) => item.entity) ?? [], [detail]);
   const openCreate = () => {
     createForm.resetFields();
     if (journeyProcess) createForm.setFieldsValue({ processId: journeyProcess.id });
+    formBaseline.current.create = JSON.stringify(createForm.getFieldsValue(true));
+    setSaveProblem(undefined);
     setCreateOpen(true);
   };
 
+  const closeEditor = (kind: 'create' | 'entity' | 'attribute' | 'relation', next?: () => void) => {
+    if (savingRef.current || submittingRef.current) return;
+    const forms = { create: createForm, entity: entityForm, attribute: attributeForm, relation: relationForm };
+    const close = () => {
+      setSaveProblem(undefined);
+      if (kind === 'create') setCreateOpen(false);
+      if (kind === 'entity') { setEntityOpen(false); setEditEntityId(undefined); }
+      if (kind === 'attribute') { setAttributeEntityId(undefined); setEditAttributeId(undefined); }
+      if (kind === 'relation') { setRelationOpen(false); setEditRelationId(undefined); }
+      next?.();
+    };
+    if (JSON.stringify(forms[kind].getFieldsValue(true)) === formBaseline.current[kind]) { close(); return; }
+    Modal.confirm({ title: '放弃未保存的修改？',
+      content: '离开会放弃当前表单的修改。已保存的草稿和冻结版本不受影响。',
+      okText: '放弃修改', cancelText: '继续编辑', onOk: close,
+    });
+  };
+
+  const validateEditor = async <T extends object,>(form: FormInstance<T>): Promise<T | undefined> => {
+    if (savingRef.current || submittingRef.current) return undefined;
+    submittingRef.current = true;
+    const epoch = loadEpoch.current;
+    try {
+      const values = await form.validateFields();
+      return epoch === loadEpoch.current ? values : undefined;
+    } catch {
+      // Field errors are displayed by Form; superseded validation must not submit.
+      return undefined;
+    } finally { submittingRef.current = false; }
+  };
+
   const create = async () => {
-    const values = await createForm.validateFields();
-    const created = await perform(() => createLogicalDraft(values), '已创建逻辑设计草稿，尚未发布或生成物理表', () => {
+    if (savingRef.current) return;
+    const values = await validateEditor(createForm);
+    if (!values) return;
+    const created = await perform(() => createLogicalDraft(values), '逻辑模型已创建', () => {
       setCreateOpen(false);
       createForm.resetFields();
     });
     if (created) await reload(created.model.id);
   };
   const addEntity = async () => {
-    if (selected == null || !detail) return;
-    const values = await entityForm.validateFields();
+    if (savingRef.current || selected == null || !detail) return;
+    const values = await validateEditor(entityForm);
+    if (!values) return;
     await perform(() => editEntityId == null
       ? addLogicalEntity(selected, values, detail.model.draftRevision)
       : updateLogicalEntity(selected, editEntityId, values, detail.model.draftRevision),
@@ -328,8 +432,9 @@ export default function LogicalWorkspace() {
     });
   };
   const addAttribute = async () => {
-    if (selected == null || attributeEntityId == null || !detail) return;
-    const values = await attributeForm.validateFields();
+    if (savingRef.current || selected == null || attributeEntityId == null || !detail) return;
+    const values = await validateEditor(attributeForm);
+    if (!values) return;
     await perform(() => editAttributeId == null
       ? addLogicalAttribute(selected, attributeEntityId, values, detail.model.draftRevision)
       : updateLogicalAttribute(selected, attributeEntityId, editAttributeId, values, detail.model.draftRevision),
@@ -338,12 +443,13 @@ export default function LogicalWorkspace() {
     });
   };
   const addRelation = async () => {
-    if (selected == null || !detail) return;
-    const values = await relationForm.validateFields();
+    if (savingRef.current || selected == null || !detail) return;
+    const values = await validateEditor(relationForm);
+    if (!values) return;
     await perform(() => editRelationId == null
       ? addLogicalRelation(selected, values, detail.model.draftRevision)
       : updateLogicalRelation(selected, editRelationId, values, detail.model.draftRevision),
-    '已保存待确认或已确认的逻辑关系', () => {
+    '业务关系已保存', () => {
       setRelationOpen(false); setEditRelationId(undefined); relationForm.resetFields();
     });
   };
@@ -352,6 +458,8 @@ export default function LogicalWorkspace() {
     entityForm.resetFields();
     const current = detail?.entities.find(x => x.entity.id === id)?.entity;
     if (current) entityForm.setFieldsValue(current);
+    formBaseline.current.entity = JSON.stringify(entityForm.getFieldsValue(true));
+    setSaveProblem(undefined);
     setEntityOpen(true);
   };
   const editAttribute = (entityId: number, id?: number) => {
@@ -361,24 +469,35 @@ export default function LogicalWorkspace() {
     const current = detail?.entities.find(x => x.entity.id === entityId)
       ?.attributes.find(x => x.id === id);
     if (current) attributeForm.setFieldsValue(current);
+    else attributeForm.setFieldsValue({ primaryFlag: false, nullable: true });
+    formBaseline.current.attribute = JSON.stringify(attributeForm.getFieldsValue(true));
+    setSaveProblem(undefined);
   };
-  const editRelation = (id?: number) => {
+  const editRelation = (id?: number, sourceEntityId?: number) => {
     setEditRelationId(id);
     relationForm.resetFields();
     const current = detail?.relations.find(x => x.id === id);
     if (current) relationForm.setFieldsValue(current);
+    else relationForm.setFieldsValue({ cardinality: 'UNKNOWN', sourceEntityId });
+    formBaseline.current.relation = JSON.stringify(relationForm.getFieldsValue(true));
+    setSaveProblem(undefined);
     setRelationOpen(true);
   };
 
   const freeze = async () => {
-    if (selected == null) return;
+    if (selected == null || savingRef.current || !detail) return;
+    savingRef.current = true;
+    const epoch = loadEpoch.current;
     setSaving(true);
     try {
       const version = await freezeLogicalDraft(selected, detail?.model.draftRevision ?? -1);
-      setVersions(await listLogicalVersions(selected));
-      message.success(`已冻结第 ${version.versionNo} 个逻辑设计草稿快照；未发布、未部署`);
-    } catch (err) { message.error(errorText(err)); }
-    finally { setSaving(false); }
+      if (epoch !== loadEpoch.current) return;
+      const historyVersions = await listLogicalVersions(selected);
+      if (epoch !== loadEpoch.current) return;
+      setVersions(historyVersions);
+      message.success(`逻辑设计版本 V${version.versionNo} 已保存`);
+    } catch (err) { if (epoch === loadEpoch.current) message.error(errorText(err)); }
+    finally { savingRef.current = false; setSaving(false); }
   };
   const previewPhysical = async (versionNo: number) => {
     if (selected == null || physicalModelId == null) {
@@ -389,12 +508,16 @@ export default function LogicalWorkspace() {
     setReviewResult(undefined);
     setMappingSelections({});
     setHandoffLoading(true);
+    const epoch = loadEpoch.current;
+    const sequence = ++handoffSequence.current;
     try {
-      setHandoffPreview(await previewLogicalPhysical(selected, versionNo, physicalModelId));
+      const preview = await previewLogicalPhysical(selected, versionNo, physicalModelId);
+      if (epoch !== loadEpoch.current || sequence !== handoffSequence.current) return;
+      setHandoffPreview(preview);
     } catch (error) {
-      message.error(errorText(error));
+      if (epoch === loadEpoch.current && sequence === handoffSequence.current) message.error(errorText(error));
     } finally {
-      setHandoffLoading(false);
+      if (epoch === loadEpoch.current && sequence === handoffSequence.current) setHandoffLoading(false);
     }
   };
 
@@ -486,7 +609,7 @@ export default function LogicalWorkspace() {
         // Keep the existing approval state when the supplementary policy read
         // is unavailable; reload will reconcile it from the server.
       }
-      message.success('MappingSet 草稿已持久保存；尚未冻结或发布物理版本');
+      message.success('字段映射草稿已保存');
     } catch (error) {
       if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
         message.error(errorText(error));
@@ -511,7 +634,7 @@ export default function LogicalWorkspace() {
         throw new Error('冻结修订身份或草稿序号不一致，拒绝显示成功');
       }
       setMappingFrozen(frozen);
-      message.success('映射冻结成功。需要另行确认才会发布 DWD 设计版本。');
+      message.success(`映射版本 V${frozen.revisionNo} 已保存`);
     } catch (error) {
       if (epoch === mappingEpoch.current && reloadEpoch === loadEpoch.current) {
         message.error(errorText(error));
@@ -535,7 +658,7 @@ export default function LogicalWorkspace() {
     const reloadEpoch = loadEpoch.current;
     Modal.confirm({
       title: '确认发布 DWD 设计版本？',
-      content: `将 DWD 模型 #${physicalId} 与 MappingRevision #${revisionId} 显式绑定发布。仅保存不可变设计版本；不会创建物理表、DataDev 任务或执行 SQL。此入口仍属 R12 受控交付，标准发布门禁待专项签收。`,
+      content: `发布 DWD 模型 #${physicalId}，引用映射版本 #${revisionId}。本次仅发布设计，数据加工需在开发工作台继续。`,
       okText: '确认发布设计',
       cancelText: '返回审阅',
       onOk: async () => {
@@ -659,13 +782,15 @@ export default function LogicalWorkspace() {
     target: { kind: 'attribute'; entityId: number; attributeId: number }
       | { kind: 'relation'; relationId: number },
   ) => {
-    if (!semanticReview || selected == null || semanticReview.logicalModelId !== selected) return;
+    if (!can('modeling:update') || !semanticReview || selected == null || semanticReview.logicalModelId !== selected) return;
+    const request = ++repairRequest.current;
+    setRepairLoading(true);
     const requestEpoch = loadEpoch.current;
     const reviewEpoch = semanticReviewEpoch.current;
     const targetModelId = selected;
     try {
       const fresh = await getLogicalDraft(targetModelId);
-      if (requestEpoch !== loadEpoch.current || reviewEpoch !== semanticReviewEpoch.current) return;
+      if (request !== repairRequest.current || requestEpoch !== loadEpoch.current || reviewEpoch !== semanticReviewEpoch.current) return;
       if (fresh.model.id !== targetModelId
           || (requestedProcessId && fresh.model.processId !== requestedProcessId)) {
         message.warning('所选逻辑草稿已不属于当前业务过程或项目，请重新打开');
@@ -681,6 +806,7 @@ export default function LogicalWorkspace() {
         setDetail(fresh);
         attributeForm.resetFields();
         attributeForm.setFieldsValue(current);
+        formBaseline.current.attribute = JSON.stringify(attributeForm.getFieldsValue(true));
         setEditAttributeId(target.attributeId);
         setAttributeEntityId(target.entityId);
       } else {
@@ -691,27 +817,36 @@ export default function LogicalWorkspace() {
         setDetail(fresh);
         relationForm.resetFields();
         relationForm.setFieldsValue(current);
+        formBaseline.current.relation = JSON.stringify(relationForm.getFieldsValue(true));
         setEditRelationId(target.relationId);
         setRelationOpen(true);
       }
       setReviewFeedback({ projectId: currentProject?.id,
         baseline: logicalGovernanceBaseline(semanticReview) });
+      setSaveProblem(undefined);
       setSemanticReview(undefined);
-      message.info('已打开当前逻辑草稿对象；冻结历史版本不会改变，请人工核对后再保存');
+      message.info('已定位当前草稿，请修改后保存');
     } catch (error) {
-      if (requestEpoch === loadEpoch.current && reviewEpoch === semanticReviewEpoch.current) {
+      if (request === repairRequest.current && requestEpoch === loadEpoch.current && reviewEpoch === semanticReviewEpoch.current) {
         message.error(errorText(error));
       }
+    } finally {
+      if (request === repairRequest.current) setRepairLoading(false);
     }
   };
 
   const showSnapshot = async (versionNo: number) => {
     if (selected == null) return;
+    const epoch = loadEpoch.current;
+    const request = ++snapshotRequest.current;
     try {
       const snapshot = await getLogicalVersionSnapshot(selected, versionNo);
+      if (epoch !== loadEpoch.current || request !== snapshotRequest.current) return;
       setSnapshotText(snapshot);
       setSnapshotOpen(true);
-    } catch (err) { message.error(errorText(err)); }
+    } catch (err) {
+      if (epoch === loadEpoch.current && request === snapshotRequest.current) message.error(errorText(err));
+    }
   };
 
   const mappingMatchesEditor = matchesSavedDwdMapping(
@@ -777,8 +912,7 @@ export default function LogicalWorkspace() {
 
   return (
     <div className="modeling-studio-page modeling-studio-logical">
-      <ModelingStudioHeader area="logical" title="业务逻辑设计工作台"
-        description="把业务过程、实体与关系建成可冻结的逻辑设计，再逐列核对物理目标。逻辑快照、映射冻结与正式发布有各自的事实和回执。"
+      <ModelingStudioHeader area="logical" title="逻辑建模"
         context={<>
           {journeyProcess ? <span>业务过程：{journeyProcess.name} · {journeyProcess.grain || '粒度待确认'}</span> : <span>当前项目逻辑模型</span>}
           {detail ? <span>草稿：{detail.model.name} · 修订 {detail.model.draftRevision}</span> : null}
@@ -790,8 +924,8 @@ export default function LogicalWorkspace() {
         action={<Button onClick={() => history.push('/semantic/processes')}>重新选择业务过程</Button>} />}
       {reviewFeedback && reviewFeedback.projectId === currentProject?.id
         && reviewFeedback.baseline.logicalModelId === selected && <Alert className="mb-4" showIcon type="info"
-        message={`已定位冻结 V${reviewFeedback.baseline.versionNo} 的当前业务对象`}
-        description="修改属性或关系后请先显式保存，再重新核验当前业务设计与标准。冻结历史版本不会被改写，也不会自动审批。"
+        message={`已定位版本 V${reviewFeedback.baseline.versionNo} 的当前业务对象`}
+        description="保存修改后，可重新检查此版本与当前设计的差异。"
         action={<Button disabled={saving || loading || semanticReviewLoading}
           onClick={() => void showSemanticReview(reviewFeedback.baseline.versionNo)}>
           修正后重新核验
@@ -800,117 +934,81 @@ export default function LogicalWorkspace() {
         message="当前冻结版本治理核验尚不可完成" description={reviewEntryProblem} />}
       {semanticReviewLoading && reviewRequested && <Alert className="mb-4" showIcon type="info"
         message="正在核验指定逻辑草稿最新冻结版本的业务语义及差异…" />}
-      {journeyProcess && <Alert className="mb-4" showIcon type="info"
-        message={`正在处理业务过程：${journeyProcess.name}（${journeyProcess.code}）`}
-        description="仅显示该过程所属逻辑草稿；URL 不授予新权限，也不会自动创建物理模型。"
-        action={<Space>
-          <Button onClick={() => history.push(processToSemantic(journeyProcess.id))}>返回业务过程</Button>
-          <Button onClick={() => history.push(processToPhysical(journeyProcess.id))}>查看该过程物理模型</Button>
-          <Button onClick={() => history.push('/modeling/logical')}>查看全部逻辑草稿</Button>
-        </Space>} />}
-      <Alert className="mb-4" type="info" showIcon
-        message="逻辑设计是业务语义与物理模型之间的桥梁"
-        description="这里创建和冻结的都是逻辑设计草稿。业务过程、标准字段由 Semantic 正式管理；保存草稿不代表物理模型已经发布、Doris 已建表或数据已执行。" />
-      <Card size="small" className="mb-4" title="当前任务 · 手动建模到设计发布"
-        extra={<Tag color={manualJourney.complete ? 'success' : manualJourney.blocked ? 'warning' : 'processing'}>
-          {manualJourney.complete ? '本次已核对发布回执' : manualJourney.blocked ? '需要处理' : '进行中'}
+      {journeyProcess && <div className="logical-process-links">
+        <Button type="link" onClick={() => history.push(processToSemantic(journeyProcess.id))}>返回业务过程</Button>
+        <Button type="link" onClick={() => history.push('/modeling/logical')}>全部逻辑模型</Button>
+      </div>}
+      <Card size="small" className="logical-journey" title="建设进度"
+        extra={<Tag color={manualJourney.complete ? 'success' : undefined}>
+          {manualJourney.complete ? '设计已发布' : '当前设计'}
         </Tag>}>
         <Steps size="small" responsive current={manualJourney.step}
           items={MANUAL_JOURNEY_LABELS.map(title => ({ title }))} />
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-slate-50 px-4 py-3">
-          <div className="min-w-0 flex-1">
-            <Typography.Text strong>
-              {manualJourney.complete ? '当前会话已完成：' : '下一步：'}{manualJourney.action}
-            </Typography.Text>
-            <Typography.Paragraph type="secondary" className="!mb-0 !mt-1">
-              {manualJourney.explanation}
-            </Typography.Paragraph>
-          </div>
+        <div className="logical-next-step">
+          <Typography.Text>{manualJourney.action}</Typography.Text>
           <Button type="primary" onClick={openManualJourneyAction}
-            disabled={loading || saving || mappingPersistBusy || Boolean(journeyProblem)}>
-            {manualJourney.action}
+            disabled={loading || saving || mappingPersistBusy || Boolean(journeyProblem)
+              || (!detail && models.length === 0 && !can('modeling:create'))}>
+            继续建模
           </Button>
         </div>
-        <Typography.Text type="secondary" className="!block !mt-2">
-          仅根据本项目当前加载的冻结版本、人工映射和服务器回读结果显示阶段；
-          刷新后若缺少发布回执，需重新核对历史。此导航不代替正式标准发布门禁，也不执行加工任务。
-        </Typography.Text>
       </Card>
-      <div className="modeling-studio-logical-board grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <Card className="modeling-studio-logical-selector" id="manual-modeling-pick" title={journeyProcess ? '该业务过程的逻辑草稿' : '项目逻辑模型'}
-          extra={<Button type="primary" disabled={Boolean(journeyProblem) || loading}
-            onClick={openCreate}>新建草稿</Button>}>
+      <div className="modeling-studio-logical-board grid grid-cols-1 gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <Card className="modeling-studio-logical-selector" id="manual-modeling-pick" title={journeyProcess ? '过程逻辑模型' : '逻辑模型'}
+          extra={<Button type="primary" disabled={!can('modeling:create') || Boolean(journeyProblem) || loading || saving}
+            onClick={openCreate}>新建模型</Button>}>
+          <Input.Search aria-label="搜索逻辑模型" placeholder="搜索名称或编码" allowClear
+            value={modelSearch} onChange={event => setModelSearch(event.target.value)} className="mb-3" />
           {models.length === 0 ? <Empty description={journeyProcess
-            ? '该业务过程尚无逻辑草稿，可创建第一份草稿' : '尚无逻辑模型，选择业务过程开始'} /> : (
+            ? '该过程暂无逻辑模型' : '暂无逻辑模型'} /> : (
             <div className="flex flex-col gap-2">
-              {models.map((model) => (
+              {models.filter(model => (model.name + ' ' + model.code).toLowerCase().includes(modelSearch.trim().toLowerCase())).map((model) => (
                 <button key={model.id} type="button"
                   className={'modeling-studio-logical-choice' + (model.id === selected ? ' is-active' : '')}
-                  aria-pressed={model.id === selected}
+                  aria-pressed={model.id === selected} disabled={saving || loading}
                   onClick={() => void selectModel(model.id)}>
-                  <strong>{model.name}</strong><span>{model.code} · 逻辑设计草稿</span>
+                  <strong>{model.name}</strong><span>{model.code}</span>
                 </button>
               ))}
+              {!models.some(model => (model.name + ' ' + model.code).toLowerCase().includes(modelSearch.trim().toLowerCase()))
+                && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="没有匹配的逻辑模型">
+                  <Button onClick={() => setModelSearch('')}>清空搜索</Button>
+                </Empty>}
             </div>
           )}
         </Card>
         <div className="flex min-w-0 flex-col gap-4">
-          {!detail ? <Card loading={loading}><Empty description="选择逻辑草稿查看实体及字段" /></Card> : (
+          {!detail ? <Card loading={loading}>{detailProblem ? <Alert type="error" showIcon
+            message={`草稿 #${selected} 暂时无法读取`} description={detailProblem}
+            action={<Button onClick={() => selected != null && void selectModel(selected)}>重新读取草稿</Button>} />
+            : <Empty description={models.length ? '选择逻辑模型开始设计' : '从业务实体开始，定义属性和关系'}>
+              {!models.length && <Button type="primary" disabled={!can('modeling:create') || Boolean(journeyProblem)}
+                onClick={openCreate}>新建模型</Button>}
+            </Empty>}</Card> : (
             <>
-              <Card id="manual-modeling-logical" title={<Space>{detail.model.name}<Tag>DRAFT</Tag></Space>}
+              <Card id="manual-modeling-logical" className="logical-design-summary"
+                title={<Space wrap>{detail.model.name}<Tag>草稿 · R{detail.model.draftRevision}</Tag></Space>}
                 extra={<Space wrap>
-                  <Button onClick={() => editEntity()}>添加业务实体</Button>
-                  <Button disabled={entities.length < 2} onClick={() => editRelation()}>定义实体关系</Button>
-                  <Button onClick={() => void selectModel(detail.model.id)}>刷新草稿</Button>
-                  <Tag>修订 {detail.model.draftRevision}</Tag>
-                  <Button type="primary" loading={saving} onClick={() => void freeze()}>冻结草稿快照</Button>
+                  <Button disabled={saving} onClick={() => void selectModel(detail.model.id)}>刷新</Button>
+                  <Button type="primary" disabled={!can('modeling:update') || !entities.length}
+                    loading={saving} onClick={() => void freeze()}>保存设计版本</Button>
                 </Space>}>
-                <Typography.Text>业务过程：{detail.process.name}（{detail.process.code}）</Typography.Text>
-                <Typography.Paragraph className="!mt-2 !mb-0" type="secondary">
-                  业务粒度：{detail.process.grain || '尚未由业务负责人确认'}。
-                  实体主键、关系基数、物理目标都需要独立审阅，系统不会按同名自动推断。
-                </Typography.Paragraph>
+                <Space wrap size={[24, 8]}>
+                  <Typography.Text type="secondary">业务过程：{detail.process.name}</Typography.Text>
+                  <Typography.Text type="secondary">粒度：{detail.process.grain || '待补充'}</Typography.Text>
+                </Space>
+                {detail.model.description && <Typography.Paragraph className="!mt-2 !mb-0" type="secondary">
+                  {detail.model.description}
+                </Typography.Paragraph>}
               </Card>
-              {detail.entities.map(({ entity, attributes }) => (
-                <Card key={entity.id} title={entity.businessName || entity.name}
-                  extra={<Space>
-                    <Button onClick={() => editEntity(entity.id)}>编辑实体</Button>
-                    <Button onClick={() => editAttribute(entity.id)}>添加属性</Button>
-                  </Space>}>
-                  <Typography.Text type="secondary">{entity.code} · {entity.description || '暂无业务说明'}</Typography.Text>
-                  <Table size="small" rowKey="id" pagination={false} className="mt-3"
-                    dataSource={attributes} columns={[
-                      { title: '属性', dataIndex: 'name', key: 'name' },
-                      { title: '编码', dataIndex: 'code', key: 'code' },
-                      { title: '逻辑类型', dataIndex: 'logicalType', key: 'logicalType' },
-                      { title: '标准字段 ID', dataIndex: 'stdFieldId', key: 'stdFieldId',
-                        render: (v?: number) => v == null ? <Tag>待治理</Tag> : <Tag color="blue">{v}</Tag> },
-                      { title: '业务主标识', dataIndex: 'primaryFlag', key: 'primaryFlag',
-                        render: (v?: boolean) => v ? '用户确认' : '否' },
-                      { title: '操作', key: 'op', render: (_, row) =>
-                        <Button type="link" onClick={() => editAttribute(entity.id, row.id)}>编辑</Button> },
-                    ]} />
-                </Card>
-              ))}
-              <Card title="实体关系（仅用户确认，未知允许保留）">
-                <Table rowKey="id" size="small" pagination={false} dataSource={detail.relations}
-                  columns={[
-                    { title: '来源实体', dataIndex: 'sourceEntityId', key: 'sourceEntityId',
-                      render: (id: number) => entities.find((e) => e.id === id)?.businessName || entities.find((e) => e.id === id)?.name || id },
-                    { title: '目标实体', dataIndex: 'targetEntityId', key: 'targetEntityId',
-                      render: (id: number) => entities.find((e) => e.id === id)?.businessName || entities.find((e) => e.id === id)?.name || id },
-                    { title: '业务关系基数', dataIndex: 'cardinality', key: 'cardinality' },
-                    { title: '说明', dataIndex: 'description', key: 'description' },
-                    { title: '操作', key: 'op', render: (_, row) =>
-                      <Button type="link" onClick={() => editRelation(row.id)}>编辑</Button> },
-                  ]} />
-              </Card>
-              <Card id="manual-modeling-physical" title="独立设计快照（不是部署版本）"
-                extra={<Space wrap>
-                  <Typography.Text type="secondary">对照项目内已有物理模型</Typography.Text>
+              <LogicalDesignStudio key={detail.model.id} detail={detail} standards={fields}
+                canEdit={can('modeling:update')} busy={saving || loading}
+                onEditEntity={editEntity} onEditAttribute={editAttribute} onEditRelation={editRelation} />
+              <Card id="manual-modeling-physical" title="设计版本与物理模型">
+                <Space wrap className="logical-physical-target">
+                  <Typography.Text type="secondary">物理目标</Typography.Text>
                   <Select<number>
-                    className="min-w-[280px]"
-                    style={{ width: 320 }}
+                    className="logical-target-select" aria-label="选择物理模型"
                     showSearch
                     allowClear
                     filterOption={false}
@@ -936,27 +1034,29 @@ export default function LogicalWorkspace() {
                       }))}
                   />
                   <Button onClick={() => history.push(processToPhysical(detail.model.processId))}>
-                    查找或新建 DWD 物理草稿
+                    新建物理模型
                   </Button>
                   <Button disabled={physicalModelId == null}
                     onClick={() => history.push(`/modeling/models/${physicalModelId}`)}>
                     打开物理模型
                   </Button>
-                </Space>}>
+                </Space>
                 <Table size="small" rowKey="id" pagination={false} dataSource={versions}
+                  scroll={{ x: 640 }} locale={{ emptyText: '保存设计版本后，可查看差异并关联物理模型' }}
                   columns={[
-                    { title: '快照版本', dataIndex: 'versionNo', key: 'versionNo' },
-                    { title: '状态', dataIndex: 'status', key: 'status', render: (s: string) => <Tag>{s}</Tag> },
-                    { title: '冻结人', dataIndex: 'createdBy', key: 'createdBy' },
+                    { title: '设计版本', dataIndex: 'versionNo', key: 'versionNo', render: (value: number) => `V${value}` },
+                    { title: '状态', dataIndex: 'status', key: 'status', render: () => <Tag>已保存快照</Tag> },
+                    { title: '创建人', dataIndex: 'createdBy', key: 'createdBy' },
                     { title: '查看', key: 'action', render: (_, version: LogicalDraftVersion) =>
                       <Space>
-                        <Button type="link" onClick={() => void showSnapshot(version.versionNo)}>原始 JSON</Button>
+                        <Button type="link" onClick={() => void showSnapshot(version.versionNo)}>设计内容</Button>
                         <Button type="link" loading={semanticReviewLoading}
                           onClick={() => void showSemanticReview(version.versionNo)}>
-                          审阅语义与变更
+                          检查标准与差异
                         </Button>
                         <Button loading={handoffLoading} type="link"
-                          onClick={() => void previewPhysical(version.versionNo)}>预检物理关联</Button>
+                          disabled={physicalModelId == null}
+                          onClick={() => void previewPhysical(version.versionNo)}>核对字段映射</Button>
                       </Space> },
                   ]} />
               </Card>
@@ -965,63 +1065,95 @@ export default function LogicalWorkspace() {
         </div>
       </div>
 
-      <Modal open={createOpen} title="基于已确认业务过程创建逻辑草稿"
-        okText="创建草稿" okButtonProps={{ loading: saving }}
-        onOk={() => void create()} onCancel={() => setCreateOpen(false)} destroyOnHidden>
+      <Modal className="logical-editor-modal" open={createOpen} title="新建逻辑模型" width={640}
+        okText="创建模型" okButtonProps={{ loading: saving }}
+        onOk={() => void create()} onCancel={() => closeEditor('create')} destroyOnHidden maskClosable={false}>
+        {saveProblem && <Alert className="mb-3" showIcon type="error" message={saveProblem} />}
         <Form layout="vertical" form={createForm}>
-          <Form.Item label="正式业务过程" name="processId" rules={[{ required: true }]}>
-            <Select showSearch optionFilterProp="label" disabled={Boolean(journeyProcess)}
+          <Form.Item label="业务过程" name="processId" rules={[{ required: true }]}>
+            <Select showSearch placeholder="选择关联的业务过程" optionFilterProp="label" disabled={Boolean(journeyProcess)}
               options={processes.map(p => ({
               label: `${p.name} · ${p.grain || '粒度待确认'}`, value: p.id,
             }))} />
           </Form.Item>
+          {!processes.length && <Typography.Paragraph type="secondary">
+            暂无可用业务过程。<Button type="link" size="small"
+              onClick={() => closeEditor('create', () => history.push('/semantic/processes'))}>前往创建</Button>
+          </Typography.Paragraph>}
+          <Row gutter={16}>
+          <Col xs={24} sm={12}>
           <Form.Item label="模型编码" name="code" rules={[{ required: true }, { pattern: /^[A-Za-z][A-Za-z0-9_]{0,127}$/, message: '英文字母开头，最多128字符' }]}>
             <Input placeholder="order_domain" />
           </Form.Item>
+          </Col><Col xs={24} sm={12}>
           <Form.Item label="模型名称" name="name" rules={[{ required: true }]}><Input placeholder="订单业务逻辑模型" /></Form.Item>
+          </Col></Row>
           <Form.Item label="业务说明" name="description"><Input.TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>
-      <Modal open={entityOpen} title={editEntityId == null ? '新增业务实体' : '编辑业务实体'} onOk={() => void addEntity()}
-        okText="保存实体" okButtonProps={{ loading: saving }} onCancel={() => { setEntityOpen(false); setEditEntityId(undefined); }} destroyOnHidden>
+      <Modal className="logical-editor-modal" open={entityOpen} title={editEntityId == null ? '新增业务实体' : '编辑业务实体'} onOk={() => void addEntity()}
+        width={640} maskClosable={false}
+        okText="保存实体" okButtonProps={{ loading: saving }} onCancel={() => closeEditor('entity')} destroyOnHidden>
+        {saveProblem && <Alert className="mb-3" showIcon type="error" message={saveProblem} />}
         <Form layout="vertical" form={entityForm}>
+          <Row gutter={16}><Col xs={24} sm={12}>
           <Form.Item name="code" label="实体编码" rules={[{ required: true }]}><Input placeholder="order" disabled={editEntityId != null} /></Form.Item>
+          </Col><Col xs={24} sm={12}>
           <Form.Item name="name" label="实体名称" rules={[{ required: true }]}><Input placeholder="Order" /></Form.Item>
+          </Col></Row>
           <Form.Item name="businessName" label="业务名称"><Input placeholder="订单" /></Form.Item>
           <Form.Item name="description" label="业务说明"><Input.TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>
-      <Modal open={attributeEntityId != null} title={editAttributeId == null ? '新增业务属性' : '编辑业务属性'} okText="保存属性"
+      <Modal className="logical-editor-modal" open={attributeEntityId != null} title={editAttributeId == null ? '新增业务属性' : '编辑业务属性'} okText="保存属性" width={680} maskClosable={false}
         okButtonProps={{ loading: saving }} onOk={() => void addAttribute()}
-        onCancel={() => { setAttributeEntityId(undefined); setEditAttributeId(undefined); }} destroyOnHidden>
+        onCancel={() => closeEditor('attribute')} destroyOnHidden>
+        {saveProblem && <Alert className="mb-3" showIcon type="error" message={saveProblem} />}
         <Form layout="vertical" form={attributeForm} initialValues={{ primaryFlag: false, nullable: true }}>
+          <Row gutter={16}><Col xs={24} sm={12}>
           <Form.Item label="属性编码" name="code" rules={[{ required: true }]}><Input placeholder="order_id" disabled={editAttributeId != null} /></Form.Item>
+          </Col><Col xs={24} sm={12}>
           <Form.Item label="属性名称" name="name" rules={[{ required: true }]}><Input placeholder="订单标识" /></Form.Item>
-          <Form.Item label="标准字段（可先留待确认）" name="stdFieldId">
-            <Select allowClear showSearch optionFilterProp="label"
+          </Col></Row>
+          <Form.Item label="标准字段" name="stdFieldId">
+            <Select allowClear showSearch optionFilterProp="label" loading={fieldsLoading}
+              placeholder="选择标准字段" notFoundContent={fieldsLoading ? '加载中' : '暂无可用标准字段'}
               options={fields.map(f => ({ label: `${f.name} · ${f.code}`, value: f.id }))} />
           </Form.Item>
-          <Form.Item label="逻辑类型" name="logicalType"><Input placeholder="STRING / DECIMAL / DATE" /></Form.Item>
-          <Form.Item label="是否已确认的业务主标识" name="primaryFlag">
-            <Select options={[{ label: '待确认/不是', value: false }, { label: '已确认', value: true }]} />
+          {fieldsProblem && <Alert type="error" showIcon className="mb-3" message="标准字段读取失败" description={fieldsProblem} />}
+          {!fieldsLoading && (!fields.length || fieldsProblem) && detail && <Typography.Paragraph type="secondary">
+            可在业务过程中维护标准字段。
+            <Button type="link" size="small" onClick={() => closeEditor('attribute',
+              () => history.push(processToSemantic(detail.model.processId)))}>前往业务过程</Button>
+          </Typography.Paragraph>}
+          <Form.Item label="逻辑类型" name="logicalType"><Input placeholder="如 STRING、DECIMAL、DATE" /></Form.Item>
+          <Row gutter={16}><Col xs={24} sm={12}>
+          <Form.Item label="业务主标识" name="primaryFlag">
+            <Select options={[{ label: '否', value: false }, { label: '是', value: true }]} />
           </Form.Item>
+          </Col><Col xs={24} sm={12}>
           <Form.Item label="是否可空" name="nullable">
             <Select options={[{ label: '可空', value: true }, { label: '不可空', value: false }]} />
           </Form.Item>
+          </Col></Row>
           <Form.Item name="description" label="业务说明"><Input.TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>
-      <Modal open={relationOpen} title={editRelationId == null ? '明确业务关系（绝不自动推断）' : '编辑业务关系'} okText="保存关系"
+      <Modal className="logical-editor-modal" open={relationOpen} title={editRelationId == null ? '新增业务关系' : '编辑业务关系'} width={640} maskClosable={false} okText="保存关系"
         okButtonProps={{ loading: saving }} onOk={() => void addRelation()}
-        onCancel={() => { setRelationOpen(false); setEditRelationId(undefined); }} destroyOnHidden>
+        onCancel={() => closeEditor('relation')} destroyOnHidden>
+        {saveProblem && <Alert className="mb-3" showIcon type="error" message={saveProblem} />}
         <Form form={relationForm} layout="vertical">
+          <Row gutter={16}><Col xs={24} sm={12}>
           <Form.Item name="sourceEntityId" label="来源实体" rules={[{ required: true }]}>
             <Select disabled={editRelationId != null} options={entities.map(e => ({ label: e.businessName || e.name, value: e.id }))} />
           </Form.Item>
+          </Col><Col xs={24} sm={12}>
           <Form.Item name="targetEntityId" label="目标实体" rules={[{ required: true }]}>
             <Select disabled={editRelationId != null} options={entities.map(e => ({ label: e.businessName || e.name, value: e.id }))} />
           </Form.Item>
-          <Form.Item name="cardinality" label="业务关系基数" rules={[{ required: true }]}>
+          </Col></Row>
+          <Form.Item name="cardinality" label="关系基数" rules={[{ required: true }]}>
             <Select options={[
               { label: '尚未确认', value: 'UNKNOWN' },
               { label: '一对一', value: 'ONE_TO_ONE' },
@@ -1030,16 +1162,14 @@ export default function LogicalWorkspace() {
               { label: '多对多', value: 'MANY_TO_MANY' },
             ]} />
           </Form.Item>
-          <Form.Item name="description" label="关系的业务说明"><Input.TextArea rows={2} /></Form.Item>
+          <Form.Item name="description" label="业务说明"><Input.TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>
 
       {handoffPreview && handoffPreview.logicalModelId === selected
         && handoffPreview.physicalModelId === physicalModelId
-        && <Card id="manual-modeling-mapping" title={`逻辑 v${handoffPreview.logicalVersionNo} → 物理 #${handoffPreview.physicalModelId} · 只读候选预检`}>
-        <Alert type={handoffPreview.blockers.length ? 'warning' : 'info'} showIcon
-          message={handoffPreview.blockers.length ? '仍有交接阻断项' : '仅已达到人工审阅条件'}
-          description="字段的 stdFieldId 一致只代表可核对候选，不代表 SQL 映射、逻辑版本已发布、物理模型已生成或数据已执行。" />
+        && <Card id="manual-modeling-mapping" title={`逻辑 v${handoffPreview.logicalVersionNo} → 物理 #${handoffPreview.physicalModelId} · 字段映射`}>
+        {handoffPreview.blockers.length > 0 && <Alert type="warning" showIcon message="请处理以下映射问题" />}
         <div className="mt-3">
           <Button onClick={() => {
             const target = detail && physicalEvidencePath({
@@ -1049,54 +1179,55 @@ export default function LogicalWorkspace() {
               physicalId: handoffPreview.physicalModelId,
             });
             if (target) history.push(target);
-          }}>打开此物理模型 · 核对逻辑依据</Button>
+          }}>打开物理模型</Button>
         </div>
-        <div className="mt-3 flex flex-wrap gap-4">
-          <Typography.Text type="secondary">冻结逻辑 v{handoffPreview.logicalVersionNo} · SHA-256：
+        <details className="mt-3">
+          <summary className="cursor-pointer text-xs text-gray-500">版本核对信息</summary>
+          <div className="mt-2 flex flex-wrap gap-4">
+          <Typography.Text type="secondary">逻辑 V{handoffPreview.logicalVersionNo} · 内容摘要：
             <Typography.Text copyable={{ text: handoffPreview.logicalSnapshotSha256 }}>
               {handoffPreview.logicalSnapshotSha256.slice(0, 16)}…
             </Typography.Text>
           </Typography.Text>
-          <Typography.Text type="secondary">物理 {handoffPreview.physicalStatus} 当前结构 · SHA-256：
+          <Typography.Text type="secondary">物理 {handoffPreview.physicalStatus} · 结构摘要：
             <Typography.Text copyable={{ text: handoffPreview.physicalStructureSha256 }}>
               {handoffPreview.physicalStructureSha256.slice(0, 16)}…
             </Typography.Text>
           </Typography.Text>
-        </div>
-        <Typography.Paragraph className="!mt-2" type="secondary">
-          指纹只标识本次读取的内容，不是物理模型正式版本。任何未来的人工确认必须重新读取并比对两端指纹，发生变化则拒绝提交。
-        </Typography.Paragraph>
+          </div>
+        </details>
         {handoffPreview.blockers.map((blocker, i) => (
           <Typography.Paragraph key={i} type="danger" className="!mt-2 !mb-0">{blocker}</Typography.Paragraph>
         ))}
-        <Table className="mt-3" size="small"
+        <Table className="mt-3" size="small" scroll={{ x: 1120 }}
           rowKey={(row) => row.physicalColumnId == null
             ? `logical-${row.logicalAttributeId ?? row.logicalAttribute}`
             : `physical-${row.physicalColumnId}`}
           pagination={false}
           dataSource={handoffPreview.columns} columns={[
-            { title: '物理字段', dataIndex: 'physicalColumn', render: (v?: string) => v || '未覆盖' },
-            { title: '物理列 ID', dataIndex: 'physicalColumnId', render: (v?: number) => v ?? '—' },
-            { title: '标准字段 ID', dataIndex: 'physicalStdFieldId', render: (id?: number) => id ?? '缺失' },
+            { title: '物理字段', dataIndex: 'physicalColumn', render: (v: string | undefined, row) =>
+              <span title={`物理列 ID：${row.physicalColumnId ?? '—'}`}>{v || '未覆盖'}</span> },
+            { title: '标准字段', dataIndex: 'physicalStdFieldId', render: (id?: number) =>
+              id == null ? '未关联' : <span title={`标准字段 ID：${id}`}>{fields.find(field => field.id === id)?.name || `#${id}`}</span> },
             { title: '逻辑实体', dataIndex: 'logicalEntity', render: (v?: string) => v || '待确认' },
-            { title: '逻辑属性', dataIndex: 'logicalAttribute', render: (v?: string) => v || '待确认' },
-            { title: '逻辑属性 ID', dataIndex: 'logicalAttributeId', render: (v?: number) => v ?? '—' },
-            { title: '状态', dataIndex: 'result', render: (v: string) => <Tag>{v}</Tag> },
+            { title: '逻辑属性', dataIndex: 'logicalAttribute', render: (v: string | undefined, row) =>
+              <span title={`逻辑属性 ID：${row.logicalAttributeId ?? '—'}`}>{v || '待选择'}</span> },
+            { title: '状态', dataIndex: 'result', render: (v: string) => <Tag>{mappingResultLabels[v] || v}</Tag> },
             { title: '原因', dataIndex: 'reason' },
             { title: '规则类型', key: 'ruleKind',
               render: (_, row) => row.physicalColumnId == null ? '—' : (
                 <Select<'DIRECT' | 'RENAME'> disabled={mappingApprovalPending} placeholder="请选择规则"
                   className="min-w-[120px]" style={{ width: 130 }}
                   value={mappingKinds[row.physicalColumnId]}
-                  options={[{ label: 'DIRECT 原样', value: 'DIRECT' },
-                    { label: 'RENAME 改名', value: 'RENAME' }]}
+                  options={[{ label: '原样映射', value: 'DIRECT' },
+                    { label: '重命名', value: 'RENAME' }]}
                   onChange={value => {
                     setMappingKinds(prev => ({ ...prev, [row.physicalColumnId!]: value }));
                     setMappingFrozen(undefined);
                     setMappingPublished(undefined);
                   }} />
               ) },
-            { title: '人工选择（仅本次浏览器会话）', key: 'selection',
+            { title: '关联逻辑属性', key: 'selection',
               render: (_, row) => row.physicalColumnId == null ? '—' : (
                 <Select<number> disabled={mappingApprovalPending} showSearch optionFilterProp="label" allowClear
                   placeholder="选择逻辑属性" className="min-w-[240px]" style={{ width: 260 }}
@@ -1122,32 +1253,32 @@ export default function LogicalWorkspace() {
           <Button type="primary" loading={reviewLoading}
             disabled={Object.keys(mappingSelections).length === 0}
             onClick={() => void validateExplicitReview()}>
-            校验本次人工选择
+            校验映射
           </Button>
           <Typography.Text type="secondary">
-            已选 {Object.keys(mappingSelections).length} 项。先核验身份，再显式选择规则类型并保存 MappingSet；冻结不代表物理版本发布。
+            已选 {Object.keys(mappingSelections).length} 项。选择映射规则后，校验并保存。
           </Typography.Text>
         </Space>
         {handoffPreview.physicalLayer === 'DWD' && <>
           {mappingPersistError && <Alert className="mt-3" type="warning" showIcon
-            message="映射持久化暂不可用" description={mappingPersistError} />}
+            message="映射暂时无法保存" description={mappingPersistError} />}
           <Space className="mt-3" wrap>
             <Button loading={mappingPersistBusy}
               disabled={!canSaveMapping || mappingApprovalPending || !!mappingPersistError || !reviewResult?.readyForManualDesign
                 || reviewSelectionSnapshot !== JSON.stringify(mappingSelections)
                 || Object.keys(mappingSelections).some(k => !mappingKinds[Number(k)])}
-              onClick={() => void saveMappingEvidence()}>保存正式 MappingSet 草稿</Button>
+              onClick={() => void saveMappingEvidence()}>保存映射草稿</Button>
             <Button loading={mappingPersistBusy}
               disabled={!canSaveMapping || mappingApprovalPending || !mappingDraft || !mappingMatchesEditor
                 || !reviewResult?.readyForManualDesign
                 || mappingDraft.logicalSnapshotSha256 !== handoffPreview.logicalSnapshotSha256
                 || mappingDraft.physicalStructureSha256 !== handoffPreview.physicalStructureSha256}
-              onClick={() => void freezeMappingEvidence()}>冻结 MappingRevision</Button>
+              onClick={() => void freezeMappingEvidence()}>保存映射版本</Button>
           </Space>
           {mappingDraft && <>
             <Alert className="mt-3" showIcon type="info"
-              message={`已保存 MappingSet #${mappingDraft.mappingSetId} · 草稿修订 R${mappingDraft.draftRevision}`}
-              description="真实持久草稿；不是已批准逻辑版本、物理发布版本或 DataDev 任务。" />
+              message={`映射草稿已保存 · R${mappingDraft.draftRevision}`}
+              description="可继续校验并保存映射版本。" />
             <Button className="mt-2" onClick={() => {
               const restored = restoreSavedDwdMapping(mappingDraft, handoffPreview);
               if (!restored) {
@@ -1164,13 +1295,13 @@ export default function LogicalWorkspace() {
               // Preserve the server-owned pending approval status when loading
               // an old draft; only a fresh owner read may clear it.
               setReviewResult(undefined);
-              message.info('已载入持久映射；请重新校验。匹配的历史冻结修订可继续用于发布确认。');
-            }}>载入已保存映射并重新校验</Button>
+              message.info('已载入保存的映射，请重新校验');
+            }}>载入已保存映射</Button>
           </>}
           {mappingFrozen && <>
             <Alert className="mt-3" showIcon type="success"
-              message={`已冻结 MappingRevision #${mappingFrozen.mappingRevisionId} · V${mappingFrozen.revisionNo}`}
-              description="冻结仅保存设计证据。正式发布必须显式二次确认；全局 DR-06/PD-010 门禁仍待签收。" />
+              message={`映射版本 V${mappingFrozen.revisionNo} 已保存`}
+              description="映射版本不可修改。完成标准核对后，可发布物理设计。" />
             {physicalModelId != null && selected != null && detail
               && <DwdStandardReviewCard
                 physicalModelId={physicalModelId}
@@ -1185,14 +1316,14 @@ export default function LogicalWorkspace() {
                 || mappingFrozen.draftRevision !== mappingDraft.draftRevision
                 || handoffPreview.physicalStatus !== 'DRAFT' || !!mappingPublished
                 || mappingApprovalPending}
-              onClick={publishMappingDesign}>确认发布 DWD 设计版本（不执行任务）</Button>
+              onClick={publishMappingDesign}>发布 DWD 设计版本</Button>
             {mappingApprovalPending && <Alert showIcon className="mt-2" type="info"
               message="DWD 设计发布审批进行中"
-              description="审批尚未通过，不能显示物理版本已发布；请从审批中心继续。" />}
+              description="可前往审批中心查看进度。" />}
           </>}
           {mappingPublished && <Alert className="mt-3" showIcon type="success"
             message={`DWD 物理设计 V${mappingPublished.versionNo} 已发布 · Version #${mappingPublished.modelVersionId}`}
-            description={`已从服务端历史版本核验 MappingRevision #${mappingPublished.mappingRevisionId}；未创建 DataDev 任务或执行数据加工。`} />}
+            description={`已关联映射版本 #${mappingPublished.mappingRevisionId}。可打开物理模型继续后续开发。`} />}
         </>}
         {reviewResult
           && reviewSelectionSnapshot === JSON.stringify(mappingSelections)
@@ -1204,9 +1335,9 @@ export default function LogicalWorkspace() {
           <div className="mt-4">
             <Alert showIcon type={reviewResult.readyForManualDesign ? 'info' : 'warning'}
               message={reviewResult.readyForManualDesign
-                ? '本次人工选择通过只读校验（不是正式确认或发布）'
-                : '本次选择存在阻断项，尚不能作为正式设计依据'}
-              description={`校验状态：${reviewResult.status} · 检查通过的字段关联：${reviewResult.reviewedMappings.length} 项。服务端已重新校验逻辑与物理证据。`} />
+                ? '字段映射校验通过'
+                : '以下映射需要调整'}
+              description={`已核对 ${reviewResult.reviewedMappings.length} 项字段关联。`} />
             {reviewResult.blockers.map((blocker, idx) => (
               <Typography.Paragraph key={idx} type="danger" className="!mt-2 !mb-0">
                 {blocker}
@@ -1215,103 +1346,11 @@ export default function LogicalWorkspace() {
           </div>
         )}
       </Card>}
-      <Modal title="冻结逻辑版本：业务语义与草稿差异（只读）"
-        width={1000} open={Boolean(semanticReview)} destroyOnHidden
-        footer={<Button onClick={() => setSemanticReview(undefined)}>关闭报告</Button>}
-        onCancel={() => setSemanticReview(undefined)}>
-        {semanticReview && <>
-          {reviewComparison && <Alert showIcon className="mb-3"
-            type={reviewComparison.state === 'WRONG_OWNER' ? 'error' : 'info'}
-            message={reviewComparison.state === 'CHANGED' ? '已重新核验：逻辑治理证据有变化'
-              : reviewComparison.state === 'UNCHANGED' ? '已重新核验：逻辑治理证据未变'
-                : '证据身份不一致，不能比较'}
-            description={reviewComparison.explanation} />}
-          <Button className="mb-3" loading={semanticReviewLoading}
-            onClick={() => void showSemanticReview(semanticReview.versionNo)}>
-            重新读取本冻结版本治理证据
-          </Button>
-          <Alert className="mb-3" showIcon
-            type={semanticReview.reviewStatus === 'NEEDS_REVIEW' ? 'warning' : 'info'}
-            message={semanticReview.reviewStatus === 'NEEDS_REVIEW'
-              ? '当前存在需要人工核对的业务语义证据'
-              : '达到人工审阅条件，不代表逻辑模型已批准'}
-            description={`逻辑草稿冻结 V${semanticReview.versionNo}，${semanticReview.designComparison === 'MATCHES_CURRENT'
-              ? '与当前业务设计内容一致' : '当前业务设计已有变更'}。报告不会写入映射或发布模型。`} />
-          <Space wrap className="mb-3">
-            <Tag>实体 {semanticReview.entityCount}</Tag>
-            <Tag>属性 {semanticReview.attributeCount}</Tag>
-            <Tag>关系 {semanticReview.relationCount}</Tag>
-            <Tag>冻结状态：{semanticReview.frozenStatus}</Tag>
-          </Space>
-          <Typography.Paragraph type="secondary">
-            冻结版本证据：
-            <Typography.Text copyable={{ text: semanticReview.frozenSnapshotSha256 }}>
-              {semanticReview.frozenSnapshotSha256.slice(0, 20)}…
-            </Typography.Text>
-          </Typography.Paragraph>
-          {semanticReview.blockers.map((reason, i) => (
-            <Typography.Paragraph type="danger" key={i} className="!mb-1">{reason}</Typography.Paragraph>
-          ))}
-          <Typography.Title level={5}>业务设计差异</Typography.Title>
-          <Table rowKey={(row) => `${row.objectType}-${row.objectId}`} size="small"
-            pagination={{ pageSize: 10 }}
-            locale={{ emptyText: '该冻结版本与当前逻辑草稿的实体、属性及关系内容一致' }}
-            dataSource={semanticReview.changes} columns={[
-              { title: '类型', dataIndex: 'objectType', width: 100 },
-              { title: '业务对象', dataIndex: 'label' },
-              { title: '变化', dataIndex: 'status', width: 150,
-                render: (value: string) => <Tag color="warning">{value}</Tag> },
-              { title: '冻结内容', dataIndex: 'frozenValue', ellipsis: true,
-                render: (value?: string) => value
-                  ? <Typography.Text ellipsis={{ tooltip: value }}>{value}</Typography.Text> : '—' },
-              { title: '当前内容', dataIndex: 'currentValue', ellipsis: true,
-                render: (value?: string) => value
-                  ? <Typography.Text ellipsis={{ tooltip: value }}>{value}</Typography.Text> : '—' },
-            ]} />
-          <Typography.Title level={5}>标准字段当前有效性</Typography.Title>
-          <Table size="small" pagination={{ pageSize: 10 }} rowKey="attributeId"
-            dataSource={semanticReview.attributes} columns={[
-              { title: '实体', dataIndex: 'entityName' },
-              { title: '属性', dataIndex: 'attributeName' },
-              { title: '标准字段 ID', dataIndex: 'stdFieldId',
-                render: (value?: number) => value ?? '待治理' },
-              { title: '当前标准', dataIndex: 'standardName',
-                render: (value?: string) => value || '—' },
-              { title: '标准角色', dataIndex: 'standardRole',
-                render: (value?: string) => value || '—' },
-              { title: '当前证据', dataIndex: 'standardStatus',
-                render: (value: string) => <Tag color={value === 'ENABLED_NOW' ? 'green' : 'warning'}>{value}</Tag> },
-              { title: '说明', dataIndex: 'explanation' },
-              { title: '操作', key: 'repair', width: 136,
-                render: (_: unknown, record: LogicalVersionSemanticReview['attributes'][number]) =>
-                  record.standardStatus !== 'ENABLED_NOW'
-                    ? <Button type="link" size="small"
-                        onClick={() => void openCurrentReviewTarget({
-                          kind: 'attribute', entityId: record.entityId, attributeId: record.attributeId,
-                        })}>定位当前属性</Button> : '—' },
-            ]} />
-          <Typography.Title level={5}>关系基数与确认边界</Typography.Title>
-          <Table size="small" pagination={{ pageSize: 10 }} rowKey="relationId"
-            dataSource={semanticReview.relations} columns={[
-              { title: '来源实体', dataIndex: 'sourceEntity' },
-              { title: '目标实体', dataIndex: 'targetEntity' },
-              { title: '声明基数', dataIndex: 'cardinality' },
-              { title: '确认状态', dataIndex: 'status',
-                render: (value: string) => <Tag color="warning">{value}</Tag> },
-              { title: '说明', dataIndex: 'explanation' },
-              { title: '操作', key: 'repair', width: 136,
-                render: (_: unknown, record: LogicalVersionSemanticReview['relations'][number]) =>
-                  <Button type="link" size="small"
-                    onClick={() => void openCurrentReviewTarget({
-                      kind: 'relation', relationId: record.relationId,
-                    })}>定位当前关系</Button> },
-            ]} />
-          {semanticReview.limitations.map((reason, i) => (
-            <Typography.Paragraph key={i} type="secondary" className="!mb-1">{reason}</Typography.Paragraph>
-          ))}
-        </>}
-      </Modal>
-      <Modal width={760} title="冻结的逻辑设计内容（只读）" open={snapshotOpen}
+      <LogicalSemanticReviewModal review={semanticReview} comparison={reviewComparison}
+        loading={semanticReviewLoading || repairLoading} canEdit={can('modeling:update')}
+        onClose={() => { repairRequest.current += 1; setRepairLoading(false); setSemanticReview(undefined); }}
+        onReload={showSemanticReview} onRepair={openCurrentReviewTarget} />
+      <Modal className="logical-editor-modal" width={760} title="设计版本内容" open={snapshotOpen}
         footer={<Button onClick={() => setSnapshotOpen(false)}>关闭</Button>}
         onCancel={() => setSnapshotOpen(false)}>
         <pre style={{ maxHeight: 420, overflow: 'auto', whiteSpace: 'pre-wrap' }}>{snapshotText}</pre>

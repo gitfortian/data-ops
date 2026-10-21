@@ -36,13 +36,14 @@ beforeEach(() => {
 it('opens exact physical editor repair location without writing or inventing publication eligibility', async () => {
   (inspectPhysicalStandardCoverage as jest.Mock).mockResolvedValue(report);
   render(<DwdStandardReviewCard {...props} />);
-  expect(screen.getByText(/这(是|一)帮助人工修复的即时证据/)).toBeInTheDocument();
+  expect(screen.getByText('检查物理字段的标准引用，定位需要完善的字段。')).toBeInTheDocument();
   expect(inspectPhysicalStandardCoverage).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: '核验当前物理标准' }));
+  fireEvent.click(screen.getByRole('button', { name: '检查标准' }));
   expect(await screen.findByText('process_time 缺少 StandardField')).toBeInTheDocument();
-  expect(screen.getByText('缺少字段 1')).toBeInTheDocument();
-  expect(screen.getByText(/证据未冻结，发布时仍须重新校验/)).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: '打开物理模型修复缺口' }));
+  expect(screen.getByText('未关联标准字段 1')).toBeInTheDocument();
+  expect(screen.queryByText('标准字段不可用 0')).not.toBeInTheDocument();
+  expect(screen.getByText('当前检查结果供设计参考。')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '打开物理模型' }));
   expect(history.push).toHaveBeenCalledWith(
     '/modeling/models/50?tab=logical&processId=22&logicalId=77'
       + '&logicalVersion=2&review=standard-coverage',
@@ -55,8 +56,8 @@ it('never claims a covered current report means it can publish', async () => {
     .mockResolvedValue({ ...report, status: 'COVERED_NOW', findings: [],
       enabledCount: 2, missingCount: 0 });
   render(<DwdStandardReviewCard {...props} />);
-  fireEvent.click(screen.getByRole('button', { name: '核验当前物理标准' }));
-  expect(await screen.findByText(/本次读取未发现覆盖缺口，但不能据此声明已获正式发布授权/))
+  fireEvent.click(screen.getByRole('button', { name: '检查标准' }));
+  expect(await screen.findByText('当前标准覆盖完整'))
     .toBeInTheDocument();
   expect(screen.queryByRole('button', { name: '确认发布设计' })).not.toBeInTheDocument();
 });
@@ -71,12 +72,13 @@ it('rejects wrong model, DWS layer, stale structure or unknown status without sh
     { ...report, status: 'COVERED_NOW', findings: ['仍有待审项'] },
     { ...report, status: 'COVERED_NOW', findings: [], missingCount: 1 },
     { ...report, columnCount: 0 },
+    { ...report, reviewCount: -1 },
   ];
   for (const reply of bad) {
     (inspectPhysicalStandardCoverage as jest.Mock).mockResolvedValueOnce(reply);
     const view = render(<DwdStandardReviewCard {...props} />);
-    fireEvent.click(screen.getByRole('button', { name: '核验当前物理标准' }));
-    expect(await screen.findByText('标准证据无法核实')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '检查标准' }));
+    expect(await screen.findByText('标准检查失败，请重试')).toBeInTheDocument();
     expect(screen.queryByText('process_time 缺少 StandardField')).not.toBeInTheDocument();
     view.unmount();
   }
@@ -85,9 +87,9 @@ it('rejects wrong model, DWS layer, stale structure or unknown status without sh
 it('keeps provider failure as unavailable rather than default covered', async () => {
   (inspectPhysicalStandardCoverage as jest.Mock).mockRejectedValue(new Error('当前项目权限已撤销'));
   render(<DwdStandardReviewCard {...props} />);
-  fireEvent.click(screen.getByRole('button', { name: '核验当前物理标准' }));
+  fireEvent.click(screen.getByRole('button', { name: '检查标准' }));
   expect(await screen.findByText('当前项目权限已撤销')).toBeInTheDocument();
-  expect(screen.queryByText('当前未发现覆盖缺口')).not.toBeInTheDocument();
+  expect(screen.queryByText('当前标准覆盖完整')).not.toBeInTheDocument();
 });
 
 it('clears old current-project evidence and ignores late replies when switching project', async () => {
@@ -96,18 +98,18 @@ it('clears old current-project evidence and ignores late replies when switching 
     .mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }))
     .mockResolvedValueOnce({ ...report, findings: ['新项目的缺口'] });
   const view = render(<DwdStandardReviewCard {...props} />);
-  fireEvent.click(screen.getByRole('button', { name: '核验当前物理标准' }));
+  fireEvent.click(screen.getByRole('button', { name: '检查标准' }));
   mockProjectId = 2;
   view.rerender(<DwdStandardReviewCard {...props} />);
   expect(screen.queryByText('process_time 缺少 StandardField')).not.toBeInTheDocument();
   await act(async () => finish(report));
   expect(screen.queryByText('process_time 缺少 StandardField')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: '核验当前物理标准' }));
+  fireEvent.click(screen.getByRole('button', { name: '检查标准' }));
   await waitFor(() => expect(screen.getByText('新项目的缺口')).toBeInTheDocument());
 });
 
 it('does not navigate with invalid business-process coordinates', () => {
   render(<DwdStandardReviewCard {...props} processId={0} />);
-  expect(screen.getByRole('button', { name: '打开物理模型修复缺口' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '打开物理模型' })).toBeDisabled();
   expect(history.push).not.toHaveBeenCalled();
 });

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import {
   getLogicalDraft, listLogicalDrafts, listLogicalVersions, previewLogicalPhysical,
 } from '@/services/modeling/logical';
@@ -46,20 +46,20 @@ it('loads an exact same-process frozen logical version and previews physical evi
   render(<LogicalPhysicalEvidencePanel model={physical} search={hint} onNavigateLogical={back} />);
   await waitFor(() => expect(listLogicalVersions).toHaveBeenCalledWith(71));
   expect(getLogicalDraft).toHaveBeenCalledWith(71);
-  const previewButton = await screen.findByText('预检逻辑↔物理（只读）');
+  const previewButton = await screen.findByText('开始对照');
   await waitFor(() => expect(previewButton.closest('button')).not.toBeDisabled());
   fireEvent.click(previewButton);
-  expect(await screen.findByText('当前证据可供人工对照（不是正式映射）')).toBeInTheDocument();
+  expect(await screen.findByText('V3 对照结果')).toBeInTheDocument();
   expect(await screen.findByText('order_id')).toBeInTheDocument();
   expect(previewLogicalPhysical).toHaveBeenCalledWith(71, 3, 701);
-  fireEvent.click(screen.getByText('返回此逻辑草稿'));
+  fireEvent.click(screen.getByText('打开逻辑模型'));
   expect(back).toHaveBeenCalledWith('/modeling/logical?processId=29&draftId=71&review=physical');
 });
 
 it('rejects a foreign process hint without silently choosing another draft', async () => {
   render(<LogicalPhysicalEvidencePanel model={physical}
     search="?tab=logical&processId=30&logicalId=71&logicalVersion=3" onNavigateLogical={jest.fn()} />);
-  expect(await screen.findByText('指定逻辑模型或版本来源不符合当前物理模型的业务过程')).toBeInTheDocument();
+  expect(await screen.findByText('指定逻辑模型不可用，请重新选择')).toBeInTheDocument();
   expect(getLogicalDraft).not.toHaveBeenCalled();
   expect(previewLogicalPhysical).not.toHaveBeenCalled();
 });
@@ -67,7 +67,7 @@ it('rejects a foreign process hint without silently choosing another draft', asy
 it('rejects a stale frozen version that does not exist on the owner', async () => {
   render(<LogicalPhysicalEvidencePanel model={physical}
     search="?tab=logical&processId=29&logicalId=71&logicalVersion=10" onNavigateLogical={jest.fn()} />);
-  expect(await screen.findByText('指定冻结版本不存在于当前逻辑模型；不能替换成最新版本。')).toBeInTheDocument();
+  expect(await screen.findByText('该设计版本不可用，请重新选择')).toBeInTheDocument();
   expect(previewLogicalPhysical).not.toHaveBeenCalled();
 });
 
@@ -75,21 +75,54 @@ it('rejects mismatched evidence instead of labeling a different model as ready',
   jest.mocked(previewLogicalPhysical).mockResolvedValueOnce({ ...evidence, physicalModelId: 702 });
   render(<LogicalPhysicalEvidencePanel model={physical} search={hint} onNavigateLogical={jest.fn()} />);
   await waitFor(() => expect(listLogicalVersions).toHaveBeenCalledWith(71));
-  const previewButton = await screen.findByText('预检逻辑↔物理（只读）');
+  const previewButton = await screen.findByText('开始对照');
   await waitFor(() => expect(previewButton.closest('button')).not.toBeDisabled());
   fireEvent.click(previewButton);
-  expect(await screen.findByText(/模型证据已变化、缺失或未通过身份校验/)).toBeInTheDocument();
-  expect(screen.queryByText('当前证据可供人工对照（不是正式映射）')).not.toBeInTheDocument();
+  expect(await screen.findByText(/模型或版本信息已变化/)).toBeInTheDocument();
+  expect(screen.queryByText('V3 对照结果')).not.toBeInTheDocument();
 });
 
 it('does not read logical evidence without Modeling READ or for an ODS model', () => {
   mockCan.mockReturnValue(false);
   const { unmount } = render(<LogicalPhysicalEvidencePanel model={physical} search={hint} onNavigateLogical={jest.fn()} />);
-  expect(screen.getByText('没有当前项目的建模读取权限，不能打开逻辑与物理审阅')).toBeInTheDocument();
+  expect(screen.getByText('暂无当前项目的建模查看权限')).toBeInTheDocument();
   expect(listLogicalDrafts).not.toHaveBeenCalled();
   unmount();
   mockCan.mockReturnValue(true);
   render(<LogicalPhysicalEvidencePanel model={{ ...physical, layerCode: 'ODS' }} search={hint} onNavigateLogical={jest.fn()} />);
-  expect(screen.getByText('ODS 或其他分层遵循独立的建模前置路径')).toBeInTheDocument();
+  expect(screen.getByText('该分层无需逻辑模型对照')).toBeInTheDocument();
   expect(listLogicalDrafts).not.toHaveBeenCalled();
+});
+
+it('provides a next step when the current process has no logical model', async () => {
+  jest.mocked(listLogicalDrafts).mockResolvedValueOnce([]);
+  const navigate = jest.fn();
+  render(<LogicalPhysicalEvidencePanel model={physical} search="" onNavigateLogical={navigate} />);
+  fireEvent.click(await screen.findByRole('button', { name: '前往逻辑建模' }));
+  expect(navigate).toHaveBeenCalledWith('/modeling/logical?processId=29');
+  expect(previewLogicalPhysical).not.toHaveBeenCalled();
+});
+
+it('offers recovery when a logical model has no saved design version', async () => {
+  jest.mocked(listLogicalVersions).mockResolvedValueOnce([]);
+  const navigate = jest.fn();
+  render(<LogicalPhysicalEvidencePanel model={physical} search={hint} onNavigateLogical={navigate} />);
+  expect(await screen.findByText(/该模型还没有设计版本/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '开始对照' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: '打开逻辑模型' }));
+  expect(navigate).toHaveBeenCalledWith('/modeling/logical?processId=29&draftId=71&review=physical');
+});
+
+it('ignores a late comparison response after the project changes', async () => {
+  let finish: (value: typeof evidence) => void = () => {};
+  jest.mocked(previewLogicalPhysical).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  const view = render(<LogicalPhysicalEvidencePanel model={physical} search={hint} onNavigateLogical={jest.fn()} />);
+  const button = await screen.findByRole('button', { name: '开始对照' });
+  await waitFor(() => expect(button).not.toBeDisabled());
+  fireEvent.click(button);
+  mockProjectId = 2;
+  view.rerender(<LogicalPhysicalEvidencePanel model={physical} search={hint} onNavigateLogical={jest.fn()} />);
+  await act(async () => finish(evidence));
+  expect(screen.queryByText('V3 对照结果')).not.toBeInTheDocument();
+  expect(screen.queryByText('order_id')).not.toBeInTheDocument();
 });
