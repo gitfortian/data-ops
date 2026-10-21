@@ -1,4 +1,6 @@
 import HttpUtils from '@/utils/HttpUtils';
+import request, { type ApiResponse } from '@/utils/request';
+import { parseLogicalId, parseLogicalJson, type LogicalId } from './logicalIdentity';
 import type { SemanticProcessRecord } from '@/services/semantic/types';
 
 const ROOT = '/api/v1/modeling/logical-models';
@@ -59,8 +61,22 @@ export interface LogicalDraftVersion {
 
 export const listLogicalDrafts = (): Promise<LogicalModelDraft[]> =>
   HttpUtils.getData<LogicalModelDraft[]>(ROOT);
-export const getLogicalDraft = (id: number): Promise<LogicalDraftDetail> =>
-  HttpUtils.getData<LogicalDraftDetail>(`${ROOT}/${id}`);
+const exactLogicalId = (id: unknown): LogicalId => {
+  const parsed = parseLogicalId(id);
+  if (parsed === undefined) throw new Error('无效的逻辑对象身份');
+  return parsed;
+};
+
+const exactOwnerResponse = <T>(raw: string): T =>
+  HttpUtils.unwrap(parseLogicalJson<ApiResponse<T>>(raw));
+
+/** Preserve Java Long identities before a JSON parser can round them. */
+export const getLogicalDraft = (id: LogicalId): Promise<LogicalDraftDetail> => {
+  const exact = exactLogicalId(id);
+  return request<string>(`${ROOT}/${exact}`, {
+    responseType: 'text', businessErrorMode: 'reject',
+  }).then(exactOwnerResponse<LogicalDraftDetail>);
+};
 export const createLogicalDraft = (payload: {
   processId: number; code: string; name: string; description?: string;
 }): Promise<LogicalDraftDetail> =>
@@ -78,11 +94,19 @@ export const updateLogicalEntity = (id: number, entityId: number, payload: {
   code: string; name: string; businessName?: string; description?: string;
 }, expectedRevision: number): Promise<LogicalDraftDetail> =>
   HttpUtils.putData<LogicalDraftDetail>(`${ROOT}/${id}/entities/${entityId}?expectedRevision=${expectedRevision}`, payload);
-export const updateLogicalAttribute = (id: number, entityId: number, attrId: number, payload: {
+export const updateLogicalAttribute = (id: LogicalId, entityId: LogicalId, attrId: LogicalId, payload: {
   code: string; name: string; stdFieldId?: number; logicalType?: string;
   description?: string; primaryFlag?: boolean; nullable?: boolean;
-}, expectedRevision: number): Promise<LogicalDraftDetail> =>
-  HttpUtils.putData<LogicalDraftDetail>(`${ROOT}/${id}/entities/${entityId}/attributes/${attrId}?expectedRevision=${expectedRevision}`, payload);
+}, expectedRevision: number): Promise<LogicalDraftDetail> => {
+  const path = `${ROOT}/${exactLogicalId(id)}/entities/${exactLogicalId(entityId)}/attributes/${exactLogicalId(attrId)}`;
+  if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) {
+    throw new Error('无效的逻辑对象修订');
+  }
+  return request<string>(`${path}?expectedRevision=${expectedRevision}`, {
+    method: 'PUT', data: payload, responseType: 'text', businessErrorMode: 'reject',
+    headers: { 'Content-Type': 'application/json' },
+  }).then(exactOwnerResponse<LogicalDraftDetail>);
+};
 export const updateLogicalRelation = (id: number, relationId: number, payload: {
   sourceEntityId: number; targetEntityId: number; cardinality: LogicalRelation['cardinality']; description?: string;
 }, expectedRevision: number): Promise<LogicalDraftDetail> =>
