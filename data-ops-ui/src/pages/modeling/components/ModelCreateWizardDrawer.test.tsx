@@ -28,8 +28,8 @@ const setup = (extra: Partial<ComponentProps<typeof ModelCreateWizardDrawer>> = 
 
 it('restores verified nested business process and its parent root domain on a scoped new-model route', async () => {
   const { submit } = setup();
-  expect(await screen.findByText('当前业务过程：下单')).toBeInTheDocument();
-  expect(screen.getByText(/业务粒度：每笔订单/)).toBeInTheDocument();
+  expect(await screen.findByText('下单 · 每笔订单')).toBeInTheDocument();
+  expect(screen.getByLabelText('业务过程')).toBeDisabled();
   expect(screen.getByText('业务域')).toBeInTheDocument();
   expect(screen.getByText('创建物理模型草稿')).toBeInTheDocument();
   fireEvent.click(screen.getByText('创建物理草稿'));
