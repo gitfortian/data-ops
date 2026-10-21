@@ -446,6 +446,48 @@ export interface ModelingMetricDraft {
   warnings: string[];
 }
 
+/** Author-confirmed derive request; persisted only by the Modeling Owner POST. */
+export interface ModelingDerivePayload {
+  processId: number;
+  layerCode: string;
+  code: string;
+  name: string;
+  dialect: ModelingCreatePayload['dialect'];
+  description?: string;
+  directoryId?: number;
+  scdType?: 'SCD1' | 'SCD2';
+  upstreamModelIds?: number[];
+  statPeriod?: string;
+  appCode?: string;
+  appName?: string;
+  upstreamLayer?: 'DWD' | 'DWS';
+  fields: Array<{
+    sourceTable?: string;
+    sourceColumn: string;
+    landingField: string;
+    stdFieldId?: number;
+    transformExpr?: string;
+    include: boolean;
+    technical: boolean;
+    fieldRole?: 'DIMENSION' | 'MEASURE';
+    aggregateFunc?: string;
+  }>;
+}
+
+/** Verified server response, not a preview-derived or simulated success. */
+export interface ModelingDeriveReceipt {
+  modelId: number;
+  code: string;
+  name: string;
+  columnCount: number;
+  governedCount: number;
+  unmatchedCount: number;
+  governanceRate: number;
+  backfilledCount: number;
+  sourceMappingSkipped: number;
+  tableAssetId?: number | null;
+}
+
 /** 派生预览:源表就绪情况 + 字段继承清单 + 治理率(只读,不写库)。 */
 export interface ModelingDerivePreview {
   processId: number;
@@ -474,7 +516,7 @@ export interface ModelingDerivePreview {
     bindingId: number;
     datasourceId: number;
     sourceTable: string;
-    tableRole: 'MAIN' | 'DETAIL' | 'DIM';
+    tableRole: 'MAIN' | 'DETAIL' | 'DIM' | 'DWD' | 'DWS';
     joinCondition?: string;
     odsModelId?: number;
     odsModelCode?: string;
