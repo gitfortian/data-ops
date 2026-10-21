@@ -6,6 +6,8 @@ import type {
   ModelingCreatePayload,
   ModelingDdlRecord,
   ModelingDerivePreview,
+  ModelingDerivePayload,
+  ModelingDeriveReceipt,
   ModelingDirectoryRecord,
   ModelingMetricDraft,
   ModelingModelId,
@@ -302,6 +304,10 @@ export const getModelingLineageGraph = async (
     relations: ((wire.relations as Record<string, unknown>[]) || []).map(convertRelation) as LineageGraph['relations'],
   };
 };
+
+/** Confirmed create operation; ModelingDeriveController owns the response. */
+export const deriveModelingModel = (payload: ModelingDerivePayload): Promise<ModelingDeriveReceipt> =>
+  HttpUtils.postData<ModelingDeriveReceipt>(`${MODELING_API_PREFIX}/derive`, payload);
 
 /** 派生预览(2026-09-17):源表就绪情况 + 字段继承清单 + 治理率;只读。 */
 export const previewModelingDerive = (
