@@ -123,7 +123,7 @@ it('returns to the exact live source table rather than forcing Asset catalog aft
   // Query parameter ordering is not an identity contract.
   expect(mockPush).toHaveBeenCalledTimes(1);
   const returnedUrl = mockPush.mock.calls[0][0] as string;
-  expect(returnedUrl.split('?')[0]).toBe('/data-source');
+  expect(returnedUrl.split('?')[0]).toBe('/data-source/explore');
   expect(Object.fromEntries(new URLSearchParams(returnedUrl.split('?')[1]).entries()))
     .toEqual(Object.fromEntries(expected.entries()));
   expect(mockCandidates).toHaveBeenCalledWith({
@@ -217,7 +217,7 @@ it('delivers the visible complete J1 journey: exact source → live columns → 
       { targetColumn: 'order_amount', sourceColumn: 'order_amount' }],
   }));
   fireEvent.click(screen.getByRole('button', { name: '保存并返回来源' }));
-  await waitFor(() => expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('/data-source?')));
+  await waitFor(() => expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('/data-source/explore?')));
   const returned = new URL(String(mockPush.mock.calls.at(-1)?.[0]), 'http://localhost');
   expect(returned.searchParams.get('sourceId')).toBe('10');
   expect(returned.searchParams.get('database')).toBe('trade_db');
