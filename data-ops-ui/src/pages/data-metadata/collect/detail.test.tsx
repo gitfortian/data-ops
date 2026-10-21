@@ -106,7 +106,7 @@ it('offers a precise source return only when the persisted job covers the exact 
   fireEvent.click(screen.getAllByText('返回原来源表')[0]);
   expect(mockPush).toHaveBeenCalledTimes(1);
   const target = String(mockPush.mock.calls[0][0]);
-  expect(target.split('?')[0]).toBe('/data-source');
+  expect(target.split('?')[0]).toBe('/data-source/explore');
   expect(new URLSearchParams(target.split('?')[1]).get('table')).toBe('trade_order');
   expect(new URLSearchParams(target.split('?')[1]).get('schema')).toBe('public');
 });

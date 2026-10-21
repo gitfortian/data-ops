@@ -23,13 +23,6 @@ jest.mock('@/services/modeling/logical', () => ({
   listLogicalVersions: jest.fn().mockResolvedValue([]),
   updateLogicalEntity: (...args: unknown[]) => mockUpdate(...args),
 }));
-jest.mock('./components/LogicalDesignStudio', () => ({ __esModule: true,
-  default: ({ detail, onEditEntity }: { detail: LogicalDraftDetail; onEditEntity: (id: number) => void }) => <div>
-    <span>工作区项目{detail.model.projectId}:{detail.entities[0].entity.businessName}</span>
-    <button type="button" onClick={() => onEditEntity(11)}>编辑测试实体</button>
-  </div>,
-}));
-
 beforeEach(() => {
   jest.clearAllMocks(); mockProjectId = 1;
   mockList.mockImplementation(() => Promise.resolve([logicalSample(mockProjectId).model]));
@@ -39,7 +32,7 @@ beforeEach(() => {
 afterEach(() => { Modal.destroyAll(); message.destroy(); });
 
 const openEditedEntity = async () => {
-  fireEvent.click(await screen.findByText('编辑测试实体'));
+  fireEvent.click(await screen.findByRole('button', { name: '编辑实体' }));
   const dialog = within(await screen.findByRole('dialog', { name: '编辑业务实体' }));
   fireEvent.change(dialog.getByLabelText('业务名称'), { target: { value: '用户正在编辑的名称' } });
   return dialog;
@@ -57,7 +50,7 @@ it('submits once with the loaded revision and uses the owner receipt as the new 
   const receipt = logicalSample(); receipt.model.draftRevision = 4;
   receipt.entities[0].entity.businessName = '服务端实际保存的名称';
   await act(async () => resolve(receipt));
-  expect(await screen.findByText('工作区项目1:服务端实际保存的名称')).toBeInTheDocument();
+  expect(await screen.findByText('服务端实际保存的名称')).toBeInTheDocument();
   expect(screen.queryByRole('dialog', { name: '编辑业务实体' })).not.toBeInTheDocument();
 });
 
@@ -84,10 +77,10 @@ it('never applies a previous project save receipt to the new project workspace',
   await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
   mockProjectId = 2;
   view.rerender(<LogicalWorkspace />);
-  await screen.findByText('工作区项目2:订单');
+  await screen.findByRole('button', { name: '编辑实体' });
   const oldReceipt = logicalSample(); oldReceipt.entities[0].entity.businessName = '旧项目晚响应';
   await act(async () => resolve(oldReceipt));
-  expect(screen.getByText('工作区项目2:订单')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '编辑实体' })).toBeInTheDocument();
   expect(screen.queryByText(/旧项目晚响应/)).not.toBeInTheDocument();
 });
 
@@ -95,7 +88,7 @@ it('keeps the authorized catalog when one draft cannot be read and permits a sco
   mockGet.mockRejectedValueOnce(new Error('暂时不可读取'));
   render(<LogicalWorkspace />);
   await screen.findByText('草稿 #10 暂时无法读取');
-  expect(screen.getByRole('combobox', { name: '选择逻辑草稿' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: /订单逻辑设计/ })).toBeEnabled();
   fireEvent.click(screen.getByText('重新读取草稿'));
-  expect(await screen.findByText('工作区项目1:订单')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: '编辑实体' })).toBeInTheDocument();
 });

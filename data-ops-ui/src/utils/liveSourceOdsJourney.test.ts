@@ -21,7 +21,7 @@ describe('FE-A2 strict live source → ODS → exact live source coordinates', (
     expect(forwardParams.get('schema')).toBe('sales');
 
     const back = buildLiveSourceReturnPath(source)!;
-    expect(back.startsWith('/data-source?')).toBe(true);
+    expect(back.startsWith('/data-source/explore?')).toBe(true);
     expect(parseLiveSourceReturn(new URLSearchParams(back.split('?')[1]))).toEqual(source);
     expect(parseLiveSourceReturn(new URLSearchParams('sourceId=18&database=trade_db&table=trade_order')))
       .toEqual({ dataSourceId: 18, database: 'trade_db', schema: undefined, table: 'trade_order' });
@@ -59,7 +59,7 @@ describe('FE-A2 strict live source → ODS → exact live source coordinates', (
     const forward = buildLiveSourceOdsPath(malicious);
     if (forward) expect(forward.startsWith('/modeling?')).toBe(true);
     const back = buildLiveSourceReturnPath(malicious);
-    if (back) expect(back.startsWith('/data-source?')).toBe(true);
+    if (back) expect(back.startsWith('/data-source/explore?')).toBe(true);
   });
 });
 

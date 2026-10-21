@@ -109,7 +109,7 @@ it('keeps every dirty structure draft edit when source return is cancelled, and 
   await act(async () => { await pendingConfirm?.onOk?.(jest.fn()); });
   expect(mockPush).toHaveBeenCalledTimes(1);
   const returned = mockPush.mock.calls[0][0] as string;
-  expect(returned.startsWith('/data-source?')).toBe(true);
+  expect(returned.startsWith('/data-source/explore?')).toBe(true);
   expect(new URLSearchParams(returned.split('?')[1]).get('table')).toBe('trade_order');
 });
 

@@ -26,15 +26,15 @@ beforeEach(() => {
 });
 
 it('does not claim ODS semantics before the target warehouse layer is selected', () => {
-  render(<ModelCreationLogicalBasis processId={15} onOpenLogical={jest.fn()} />);
-  expect(screen.getByText('请选择目标数仓分层')).toBeInTheDocument();
+  const { container } = render(<ModelCreationLogicalBasis processId={15} onOpenLogical={jest.fn()} />);
+  expect(container).toBeEmptyDOMElement();
   expect(screen.queryByText('ODS 贴源建模是独立路径')).not.toBeInTheDocument();
   expect(listLogicalDrafts).not.toHaveBeenCalled();
 });
 
 it('never queries a logical draft for source-to-ODS creation', () => {
-  render(<ModelCreationLogicalBasis layer="ODS" processId={15} onOpenLogical={jest.fn()} />);
-  expect(screen.getByText('ODS 贴源建模是独立路径')).toBeInTheDocument();
+  const { container } = render(<ModelCreationLogicalBasis layer="ODS" processId={15} onOpenLogical={jest.fn()} />);
+  expect(container).toBeEmptyDOMElement();
   expect(listLogicalDrafts).not.toHaveBeenCalled();
 });
 
