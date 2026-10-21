@@ -142,8 +142,16 @@ it('protects a changed DWD mapping on cancel and reports its unsaved editor stat
   expect(expression).toHaveValue('old + 1');
   expect(setModelingMapping).not.toHaveBeenCalled();
   await waitFor(() => expect(screen.queryAllByText('放弃未保存的映射？')).toHaveLength(0));
+  // Guard the second discard via its explicit confirm callback, not a portal animation.
+  const confirmation = jest.spyOn(Modal, 'confirm');
   fireEvent.click(dialog.getByRole('button', { name: /^取\s*消$/ }));
-  fireEvent.click(await screen.findByRole('button', { name: '放弃修改' }));
+  await waitFor(() => expect(confirmation).toHaveBeenCalled());
+  const configuration = confirmation.mock.calls[confirmation.mock.calls.length - 1][0];
+  expect(configuration).toEqual(expect.objectContaining({
+    title: '放弃未保存的映射？', okText: '放弃修改', cancelText: '继续编辑',
+  }));
+  await act(async () => { await configuration.onOk?.(jest.fn() as any); });
+  confirmation.mockRestore();
   await waitFor(() => expect(changed).toHaveBeenLastCalledWith({ loading: false, saving: false, dirty: false }));
   expect(screen.queryByRole('dialog', { name: '字段映射 · user_id' })).not.toBeInTheDocument();
 });
